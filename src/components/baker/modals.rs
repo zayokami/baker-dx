@@ -884,3 +884,76 @@ pub fn NewChatModal(
         }
     }
 }
+
+#[component]
+pub fn TutorialModal(on_close: EventHandler<()>, on_confirm: EventHandler<bool>) -> Element {
+    let mut dont_show_again = use_signal(|| false);
+    let tutorial_html = use_memo(|| {
+        let mut html = include_str!("../../../tutorial.html").to_string();
+        let img1 = data_url_from_bytes(
+            "image/png",
+            include_bytes!("../../../tutorial/1.png").to_vec(),
+        );
+        let img2 = data_url_from_bytes(
+            "image/png",
+            include_bytes!("../../../tutorial/2.png").to_vec(),
+        );
+        let img3 = data_url_from_bytes(
+            "image/png",
+            include_bytes!("../../../tutorial/3.png").to_vec(),
+        );
+        let img4 = data_url_from_bytes(
+            "image/png",
+            include_bytes!("../../../tutorial/4.png").to_vec(),
+        );
+        let img5 = data_url_from_bytes(
+            "image/png",
+            include_bytes!("../../../tutorial/5.png").to_vec(),
+        );
+        html = html.replace("./tutorial/1.png", &img1);
+        html = html.replace("./tutorial/2.png", &img2);
+        html = html.replace("./tutorial/3.png", &img3);
+        html = html.replace("./tutorial/4.png", &img4);
+        html = html.replace("./tutorial/5.png", &img5);
+        html
+    });
+    let tutorial_html = tutorial_html();
+
+    rsx! {
+        div {
+            class: "fixed inset-0 bg-black/50 flex items-center justify-center z-50 backdrop-blur-sm",
+            onclick: move |_| on_close.call(()),
+            div {
+                class: "bg-[#2b2b2b] w-[720px] max-w-[90vw] rounded-xl shadow-2xl overflow-hidden border border-gray-600",
+                onclick: |e| e.stop_propagation(),
+                div { class: "px-6 py-4 border-b border-gray-600 flex justify-between items-center bg-[#333]",
+                    h2 { class: "text-white text-lg font-bold", "教程" }
+                    button {
+                        class: "text-gray-400 hover:text-white transition-colors",
+                        onclick: move |_| on_close.call(()),
+                        "✕"
+                    }
+                }
+                div { class: "p-6 max-h-[60vh] overflow-y-auto custom-scrollbar text-gray-200 text-sm leading-relaxed space-y-3",
+                    dangerous_inner_html: "{tutorial_html}"
+                }
+                div { class: "px-6 pb-6 pt-4 border-t border-gray-600 flex items-center justify-between",
+                    label { class: "flex items-center gap-2 text-gray-300 text-sm cursor-pointer select-none",
+                        input {
+                            r#type: "checkbox",
+                            class: "w-4 h-4 accent-blue-600",
+                            checked: dont_show_again(),
+                            onclick: move |_| dont_show_again.set(!dont_show_again()),
+                        }
+                        span { "不再显示" }
+                    }
+                    button {
+                        class: "px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded text-sm font-medium",
+                        onclick: move |_| on_confirm.call(dont_show_again()),
+                        "确定"
+                    }
+                }
+            }
+        }
+    }
+}

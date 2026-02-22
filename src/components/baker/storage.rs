@@ -149,6 +149,7 @@ fn migrate_legacy_state(legacy: LegacyAppState) -> AppState {
         operators,
         background: legacy.background,
         update_snooze_date: None,
+        hide_tutorial: false,
     }
 }
 

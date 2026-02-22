@@ -1,7 +1,7 @@
 use crate::components::baker::chat_area::{ChatArea, PendingTyping, ReplayTypingPhase};
 use crate::components::baker::modals::{
     NewChatModal, NewChatSelection, ProfileModal, ReplayIntervalMode, ReplaySettings,
-    ReplaySettingsModal, SettingsModal, UpdateAvailableModal,
+    ReplaySettingsModal, SettingsModal, TutorialModal, UpdateAvailableModal,
 };
 use crate::components::baker::models::{
     BackgroundMode, ChatHeadStyle, Contact, Message, MessageKind,
@@ -108,7 +108,7 @@ async fn fetch_latest_release() -> Option<ReleaseResponse> {
     let response = client
         .get(url)
         .header("Accept", "application/vnd.github+json")
-        .header("User-Agent", "baker-dx")
+        .header("X-GitHub-Api-Version", "2022-11-28")
         .send()
         .await
         .ok()?;
@@ -142,6 +142,7 @@ pub fn BakerLayout() -> Element {
     let mut show_settings = use_signal(|| false);
     let mut show_new_chat = use_signal(|| false);
     let mut show_profile = use_signal(|| false);
+    let mut show_tutorial = use_signal(|| false);
 
     let mut selected_contact_id = use_signal(|| Option::<String>::None);
     let mut menu_close_token = use_signal(|| 0usize);
@@ -592,6 +593,7 @@ pub fn BakerLayout() -> Element {
     };
 
     let user_profile = app_state.read().user_profile.clone();
+    let hide_tutorial = app_state.read().hide_tutorial;
     let replay_pending_for_contact = use_memo(move || {
         if let Some(replay) = replay_active() {
             if let Some(selected_id) = selected_contact_id() {
@@ -653,6 +655,17 @@ pub fn BakerLayout() -> Element {
                     on_save: update_profile,
                 }
             }
+            if show_tutorial() {
+                TutorialModal {
+                    on_close: move |_| show_tutorial.set(false),
+                    on_confirm: move |dont_show| {
+                        if dont_show {
+                            app_state.write().hide_tutorial = true;
+                        }
+                        show_tutorial.set(false);
+                    },
+                }
+            }
 
             if replay_request_msg_id().is_some() {
                 ReplaySettingsModal {
@@ -691,6 +704,17 @@ pub fn BakerLayout() -> Element {
                         class: "text-white text-base font-bold cursor-pointer select-none hover:text-gray-300 transition-colors",
                         ondoubleclick: move |_| show_settings.set(true),
                         "//BAKER/好友沟通"
+                    }
+                    if !hide_tutorial {
+                        a {
+                            class: "text-blue-300 text-sm underline hover:text-blue-200 transition-colors",
+                            href: "#",
+                            onclick: move |evt| {
+                                evt.prevent_default();
+                                show_tutorial.set(true);
+                            },
+                            "点击这里看教程！！"
+                        }
                     }
                 }
 
@@ -745,7 +769,7 @@ pub fn BakerLayout() -> Element {
                         rsx! {
                             ChatArea {
                                 contact,
-                                    operators,
+                                operators,
                                 messages,
                                 user_profile,
                                 menu_close_token,
@@ -753,9 +777,9 @@ pub fn BakerLayout() -> Element {
                                 force_first_avatar,
                                 pending_typing: replay_pending_for_contact,
                                 on_send_message: handle_send,
-                                    on_send_other_message: move |(sender_id, text)| {
-                                        handle_send_other(sender_id, text);
-                                    },
+                                on_send_other_message: move |(sender_id, text)| {
+                                    handle_send_other(sender_id, text);
+                                },
                                 on_send_status: handle_send_status,
                                 on_delete_message: delete_message,
                                 on_edit_message: edit_message,

@@ -107,4 +107,6 @@ pub struct AppState {
     pub background: BackgroundSettings,
     #[serde(default)]
     pub update_snooze_date: Option<String>,
+    #[serde(default)]
+    pub hide_tutorial: bool,
 }
