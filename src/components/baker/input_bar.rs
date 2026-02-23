@@ -1,4 +1,32 @@
+use crate::dioxus_elements::FileData;
+use base64::Engine;
 use dioxus::prelude::*;
+
+fn mime_from_filename(name: &str) -> &'static str {
+    match name
+        .rsplit('.')
+        .next()
+        .map(|ext| ext.to_lowercase())
+        .as_deref()
+    {
+        Some("png") => "image/png",
+        Some("jpg") | Some("jpeg") => "image/jpeg",
+        Some("gif") => "image/gif",
+        Some("webp") => "image/webp",
+        _ => "application/octet-stream",
+    }
+}
+
+fn data_url_from_bytes(mime: &str, bytes: Vec<u8>) -> String {
+    let encoded = base64::engine::general_purpose::STANDARD.encode(bytes);
+    format!("data:{mime};base64,{encoded}")
+}
+
+fn menu_style(x: i32, y: i32, width: i32, height: i32) -> String {
+    format!(
+        "left: clamp(8px, {x}px, calc(100vw - {width}px - 8px)); top: clamp(8px, {y}px, calc(100vh - {height}px - 8px));"
+    )
+}
 
 const CHAT_ENTER: Asset = asset!("/assets/images/chat_enter.png");
 const CHAT_EMOJI: Asset = asset!("/assets/images/chat_emoji.png");
@@ -10,11 +38,14 @@ pub fn InputBar(
     on_send_other: EventHandler<String>,
     is_group: bool,
     on_send_status: EventHandler<String>,
+    on_send_image: EventHandler<String>,
     menu_close_token: ReadSignal<usize>,
     clear_text_token: ReadSignal<usize>,
 ) -> Element {
     let mut text = use_signal(String::new);
     let mut send_menu = use_signal(|| Option::<(i32, i32)>::None);
+    let mut plus_menu = use_signal(|| Option::<(i32, i32)>::None);
+    let mut image_input_token = use_signal(|| 0usize);
 
     let mut handle_submit = move || {
         let val = text.read().clone();
@@ -39,6 +70,7 @@ pub fn InputBar(
     use_effect(move || {
         menu_close_token.read();
         send_menu.set(None);
+        plus_menu.set(None);
     });
     use_effect(move || {
         clear_text_token.read();
@@ -48,12 +80,15 @@ pub fn InputBar(
     rsx! {
         div {
             class: "w-full h-12 flex items-center gap-3",
-            onclick: move |_| send_menu.set(None),
+            onclick: move |_| {
+                send_menu.set(None);
+                plus_menu.set(None);
+            },
 
             if let Some((x, y)) = send_menu() {
                 div {
                     class: "fixed z-[100] bg-[#2b2b2b] border border-gray-600 rounded shadow-xl py-1 w-36",
-                    style: "left: {x}px; top: {y}px;",
+                    style: "{menu_style(x, y, 144, 96)}",
                     onclick: |e| e.stop_propagation(),
                     div {
                         class: "px-4 py-2 hover:bg-[#3a3a3a] cursor-pointer text-white text-sm transition-colors",
@@ -74,6 +109,45 @@ pub fn InputBar(
                             send_menu.set(None);
                         },
                         "发送为状态"
+                    }
+                }
+            }
+
+            if let Some((x, y)) = plus_menu() {
+                div {
+                    class: "fixed z-[100] bg-[#2b2b2b] border border-gray-600 rounded shadow-xl py-1 w-36",
+                    style: "{menu_style(x, y, 144, 56)}",
+                    onclick: |e| e.stop_propagation(),
+                    div {
+                        class: "px-4 py-2 hover:bg-[#3a3a3a] cursor-pointer text-white text-sm transition-colors relative overflow-hidden",
+                        "发送图片……"
+                        input {
+                            key: "{image_input_token()}",
+                            r#type: "file",
+                            accept: "image/*",
+                            class: "absolute inset-0 opacity-0 cursor-pointer",
+                            onchange: move |evt| {
+                                let files: Vec<FileData> = evt.files();
+                                if let Some(file) = files.first().cloned() {
+                                    let file_name: String = file.name();
+                                    let mime = file
+                                        .content_type()
+                                        .unwrap_or_else(|| mime_from_filename(&file_name).to_string());
+                                    let mut token = image_input_token;
+                                    let send_image = on_send_image.clone();
+                                    spawn(async move {
+                                        if let Ok(bytes) = file.read_bytes().await {
+                                            let data_url = data_url_from_bytes(&mime, bytes.to_vec());
+                                            send_image.call(data_url);
+                                            token.set(token() + 1);
+                                        }
+                                    });
+                                } else {
+                                    image_input_token.set(image_input_token() + 1);
+                                }
+                                plus_menu.set(None);
+                            },
+                        }
                     }
                 }
             }
@@ -129,7 +203,13 @@ pub fn InputBar(
                 button {
                     class: "w-10 h-10 rounded-full flex items-center justify-center shadow-sm hover:brightness-95 transition-all cursor-pointer",
                     style: "background-color: rgb(240, 238, 238);",
-                    onclick: move |_| handle_submit(),
+                    onclick: move |evt| {
+                        evt.stop_propagation();
+                        plus_menu.set(Some((
+                            evt.client_coordinates().x as i32,
+                            evt.client_coordinates().y as i32,
+                        )));
+                    },
                     img {
                         src: "{CHAT_PLUS}",
                         class: "w-6 h-6 object-contain opacity-80",

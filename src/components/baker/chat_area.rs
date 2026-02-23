@@ -13,6 +13,12 @@ const CHAT_HEAD_LEFT_2: Asset = asset!("/assets/images/chat_head_left_2.png");
 const CHAT_HEAD_MID_2: Asset = asset!("/assets/images/chat_head_mid_2.png");
 const CHAT_HEAD_RIGHT_2: Asset = asset!("/assets/images/chat_head_right_2.png");
 
+fn menu_style(x: i32, y: i32, width: i32, height: i32) -> String {
+    format!(
+        "left: clamp(8px, {x}px, calc(100vw - {width}px - 8px)); top: clamp(8px, {y}px, calc(100vh - {height}px - 8px));"
+    )
+}
+
 #[derive(Clone, PartialEq)]
 pub enum ReplayTypingPhase {
     Typing,
@@ -38,6 +44,7 @@ pub fn ChatArea(
     on_send_message: EventHandler<String>,
     on_send_other_message: EventHandler<(String, String)>,
     on_send_status: EventHandler<String>,
+    on_send_image: EventHandler<String>,
     on_delete_message: EventHandler<String>,
     on_edit_message: EventHandler<(String, String)>,
     on_insert_message: EventHandler<(String, String, bool)>,
@@ -235,7 +242,7 @@ pub fn ChatArea(
             if let Some((x, y, msg_id)) = context_menu() {
                 div {
                     class: "fixed z-[100] bg-[#2b2b2b] border border-gray-600 rounded shadow-xl py-1 w-32",
-                    style: "left: {x}px; top: {y}px;",
+                    style: "{menu_style(x, y, 128, 176)}",
                     onclick: |e| e.stop_propagation(),
                     div {
                         class: "px-4 py-2 hover:bg-[#3a3a3a] cursor-pointer text-white text-sm transition-colors",
@@ -499,6 +506,7 @@ pub fn ChatArea(
                             },
                             is_group: contact.is_group,
                             on_send_status: move |text| on_send_status.call(text),
+                            on_send_image: move |data_url| on_send_image.call(data_url),
                             menu_close_token,
                             clear_text_token: clear_input_token,
                         }
@@ -551,9 +559,17 @@ fn MessageBubble(
             "background-color: {bg_color}; background-image: none; overflow-wrap: anywhere; word-break: break-word;"
         )
     };
+    let image_bubble_style =
+        "background: transparent; background-image: none; box-shadow: none; padding: 0;";
 
+    let is_image = matches!(message.kind, MessageKind::Image);
     let base_bubble_class =
         "relative px-3 py-2 text-base font-medium shadow-sm break-words whitespace-pre-wrap leading-relaxed text-left";
+    let bubble_class = if is_image {
+        "relative text-base font-medium leading-relaxed text-left"
+    } else {
+        base_bubble_class
+    };
     let typing_bubble_class =
         "relative px-3 py-2 text-base font-medium shadow-sm leading-relaxed text-left min-h-[42px] flex items-center";
 
@@ -658,29 +674,31 @@ fn MessageBubble(
                         evt.prevent_default();
                         on_context_menu.call(evt);
                     },
-                    if !is_self {
-                        div { class: "absolute top-0 -left-[8px] w-[8px] h-[20px] overflow-hidden",
-                            svg {
-                                view_box: "0 0 8 20",
-                                width: "100%",
-                                height: "100%",
-                                preserve_aspect_ratio: "none",
-                                path {
-                                    d: "M8,0 L0,0 Q8,0 8,20 Z",
-                                    fill: "{bg_color}",
+                    if !is_image {
+                        if !is_self {
+                            div { class: "absolute top-0 -left-[8px] w-[8px] h-[20px] overflow-hidden",
+                                svg {
+                                    view_box: "0 0 8 20",
+                                    width: "100%",
+                                    height: "100%",
+                                    preserve_aspect_ratio: "none",
+                                    path {
+                                        d: "M8,0 L0,0 Q8,0 8,20 Z",
+                                        fill: "{bg_color}",
+                                    }
                                 }
                             }
-                        }
-                    } else {
-                        div { class: "absolute top-0 -right-[8px] w-[8px] h-[20px] overflow-hidden",
-                            svg {
-                                view_box: "0 0 8 20",
-                                width: "100%",
-                                height: "100%",
-                                preserve_aspect_ratio: "none",
-                                path {
-                                    d: "M0,0 L8,0 Q0,0 0,20 Z",
-                                    fill: "{bg_color}",
+                        } else {
+                            div { class: "absolute top-0 -right-[8px] w-[8px] h-[20px] overflow-hidden",
+                                svg {
+                                    view_box: "0 0 8 20",
+                                    width: "100%",
+                                    height: "100%",
+                                    preserve_aspect_ratio: "none",
+                                    path {
+                                        d: "M0,0 L8,0 Q0,0 0,20 Z",
+                                        fill: "{bg_color}",
+                                    }
                                 }
                             }
                         }
@@ -700,9 +718,16 @@ fn MessageBubble(
                         }
                     } else {
                         div {
-                            class: "{base_bubble_class} {bubble_radius_class} {text_color}",
-                            style: "{bubble_style}",
-                            div { style: "{text_anim_style}", "{message.content}" }
+                            class: "{bubble_class} {bubble_radius_class} {text_color}",
+                            style: if is_image { "{image_bubble_style}" } else { "{bubble_style}" },
+                            if is_image {
+                                img {
+                                    src: "{message.content}",
+                                    class: "max-w-[320px] object-contain rounded",
+                                }
+                            } else {
+                                div { style: "{text_anim_style}", "{message.content}" }
+                            }
                         }
                     }
                 }

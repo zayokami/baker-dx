@@ -27,6 +27,7 @@ pub enum MessageKind {
     #[default]
     Normal,
     Status,
+    Image,
 }
 
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]

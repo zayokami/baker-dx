@@ -235,6 +235,11 @@ pub fn BakerLayout() -> Element {
         add_message(user_id, content, MessageKind::Status);
     };
 
+    let handle_send_image = move |data_url: String| {
+        let user_id = app_state.read().user_profile.id.clone();
+        add_message(user_id, data_url, MessageKind::Image);
+    };
+
     let selected_contact = {
         let selected_id = selected_contact_id();
         app_state
@@ -809,6 +814,7 @@ pub fn BakerLayout() -> Element {
                                     handle_send_other(sender_id, text);
                                 },
                                 on_send_status: handle_send_status,
+                                on_send_image: handle_send_image,
                                 on_delete_message: delete_message,
                                 on_edit_message: edit_message,
                                 on_insert_message: insert_message,
