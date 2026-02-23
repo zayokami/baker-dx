@@ -20,6 +20,27 @@ use std::time::Duration;
 use tokio::time::sleep;
 use uuid::Uuid;
 
+const MESSAGE_SOUND: Asset = asset!("/assets/sound/message.mp3");
+const MESSAGE_SELF_SOUND: Asset = asset!("/assets/sound/message-self.mp3");
+
+fn play_message_sound(is_self: bool) {
+    let sound_src = if is_self {
+        MESSAGE_SELF_SOUND.to_string()
+    } else {
+        MESSAGE_SOUND.to_string()
+    };
+    spawn(async move {
+        let script = format!(
+            r#"
+            const audio = new Audio("{sound_src}");
+            audio.volume = 0.5;
+            audio.play();
+        "#
+        );
+        let _ = document::eval(&script).await;
+    });
+}
+
 #[derive(Clone, PartialEq)]
 struct UpdateInfo {
     version: String,
@@ -188,6 +209,7 @@ pub fn BakerLayout() -> Element {
             None => return,
         };
 
+        let is_self = sender_id == app_state.read().user_profile.id;
         let new_id = {
             let mut state = app_state.write();
             let messages = state
@@ -205,6 +227,7 @@ pub fn BakerLayout() -> Element {
             });
             new_id
         };
+        play_message_sound(is_self);
 
         let mut app_state_for_anim = app_state;
         spawn(async move {
@@ -546,6 +569,8 @@ pub fn BakerLayout() -> Element {
                                 ..msg.clone()
                             });
                         });
+                        let is_self = msg.sender_id == user_id;
+                        play_message_sound(is_self);
                         let mut replay_messages_anim = replay_messages_async;
                         let msg_id = msg.id;
                         spawn(async move {
@@ -595,6 +620,7 @@ pub fn BakerLayout() -> Element {
                             id: msg_id,
                             phase: ReplayTypingPhase::Reveal,
                         }));
+                        play_message_sound(false);
                         sleep_ms(200).await;
                         replay_pending_async.set(None);
                     } else {
@@ -608,6 +634,7 @@ pub fn BakerLayout() -> Element {
                                 ..msg.clone()
                             });
                         });
+                        play_message_sound(true);
                         let mut replay_messages_anim = replay_messages_async;
                         let msg_id = msg.id;
                         spawn(async move {
