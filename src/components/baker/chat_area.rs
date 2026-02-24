@@ -461,30 +461,41 @@ pub fn ChatArea(
                                 pending_phase,
                                 sender_name,
                                 sender_avatar,
-                            } => rsx! {
-                                div { class: "{item_margin}", key: "{msg_id}",
-                                    MessageBubble {
-                                        message: msg,
-                                        is_self,
-                                        show_avatar,
-                                        show_sender_name: contact.is_group && show_avatar,
-                                        sender_name,
-                                        sender_avatar,
-                                        pending_phase,
-                                        user_profile: user_profile.clone(),
-                                        on_context_menu: move |evt: MouseEvent| {
-                                            context_menu
-                                                .set(
-                                                    Some((
-                                                        evt.client_coordinates().x as i32,
-                                                        evt.client_coordinates().y as i32,
-                                                        msg_id.clone(),
-                                                    )),
-                                                );
-                                        },
+                            } => {
+                                let row_key = if force_first_avatar {
+                                    if pending_phase.is_some() {
+                                        msg_id.clone()
+                                    } else {
+                                        format!("{msg_id}-{}", msg.animate)
+                                    }
+                                } else {
+                                    msg_id.clone()
+                                };
+                                rsx! {
+                                    div { class: "{item_margin}", key: "{row_key}",
+                                        MessageBubble {
+                                            message: msg,
+                                            is_self,
+                                            show_avatar,
+                                            show_sender_name: contact.is_group && show_avatar,
+                                            sender_name,
+                                            sender_avatar,
+                                            pending_phase,
+                                            user_profile: user_profile.clone(),
+                                            on_context_menu: move |evt: MouseEvent| {
+                                                context_menu
+                                                    .set(
+                                                        Some((
+                                                            evt.client_coordinates().x as i32,
+                                                            evt.client_coordinates().y as i32,
+                                                            msg_id.clone(),
+                                                        )),
+                                                    );
+                                            },
+                                        }
                                     }
                                 }
-                            },
+                            }
                         }
                     }
                 }
@@ -531,9 +542,9 @@ fn MessageBubble(
 ) -> Element {
     let align_class = if is_self { "items-end" } else { "items-start" };
     let anim_origin = if is_self {
-        "origin-top-right"
+        "transform-origin: calc(100% + 8px) 0;"
     } else {
-        "origin-top-left"
+        "transform-origin: -8px 0;"
     };
 
     let (bg_color, text_color, show_grid) = if is_self {
@@ -584,9 +595,9 @@ fn MessageBubble(
             pending_phase,
             Some(ReplayTypingPhase::Reveal) | Some(ReplayTypingPhase::Typing)
         ) {
-        "animation: bubbleExpand 0.15s cubic-bezier(1,0,1,0.2) forwards;"
+        format!("animation: bubbleExpand 0.15s cubic-bezier(1,0,1,0.2) forwards; {anim_origin}")
     } else {
-        ""
+        anim_origin.to_string()
     };
     let text_anim_style = if message.animate
         || matches!(
@@ -613,13 +624,11 @@ fn MessageBubble(
         "flex justify-start"
     };
     let bubble_wrap_class = if is_self {
-        format!(
-            "relative group mt-1 {anim_origin} cursor-context-menu inline-block max-w-[60%] min-w-0 mr-[68px]"
-        )
+        "relative group mt-1 cursor-context-menu inline-block max-w-[60%] min-w-0 mr-[68px]"
+            .to_string()
     } else {
-        format!(
-            "relative group mt-1 {anim_origin} cursor-context-menu inline-block max-w-[60%] min-w-0 ml-[68px]"
-        )
+        "relative group mt-1 cursor-context-menu inline-block max-w-[60%] min-w-0 ml-[68px]"
+            .to_string()
     };
     let name_wrap_class = if is_self {
         "w-full flex justify-end pr-[68px]"

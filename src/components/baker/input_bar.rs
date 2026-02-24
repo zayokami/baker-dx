@@ -134,7 +134,7 @@ pub fn InputBar(
                                         .content_type()
                                         .unwrap_or_else(|| mime_from_filename(&file_name).to_string());
                                     let mut token = image_input_token;
-                                    let send_image = on_send_image.clone();
+                                    let send_image = on_send_image;
                                     spawn(async move {
                                         if let Ok(bytes) = file.read_bytes().await {
                                             let data_url = data_url_from_bytes(&mime, bytes.to_vec());
