@@ -73,18 +73,21 @@ pub fn ChatArea(
         messages.read();
         pending_typing.read();
         spawn(async move {
-            // tokio::time::sleep(std::time::Duration::from_millis(50)).await;
             let eval = document::eval(
                 r#"
-                setTimeout(() => {
+                requestAnimationFrame(() => {
                     const container = document.getElementById('chat-scroll-container');
-                    if (container) {
-                        container.scrollTo({
-                            top: container.scrollHeight,
-                            behavior: 'instant'
-                        });
+                    if (!container) return;
+                    const lastBubble = container.querySelector('.bubble-wrap:last-of-type');
+                    if (lastBubble) {
+                        lastBubble.getBoundingClientRect();
                     }
-                }, 0);
+                    void container.offsetHeight;
+                    container.scrollTo({
+                        top: container.scrollHeight,
+                        behavior: 'instant'
+                    });
+                });
             "#,
             );
             let _ = eval.await;
@@ -462,15 +465,7 @@ pub fn ChatArea(
                                 sender_name,
                                 sender_avatar,
                             } => {
-                                let row_key = if force_first_avatar {
-                                    if pending_phase.is_some() {
-                                        msg_id.clone()
-                                    } else {
-                                        format!("{msg_id}-{}", msg.animate)
-                                    }
-                                } else {
-                                    msg_id.clone()
-                                };
+                                let row_key = msg_id.clone();
                                 rsx! {
                                     div { class: "{item_margin}", key: "{row_key}",
                                         MessageBubble {
@@ -624,10 +619,10 @@ fn MessageBubble(
         "flex justify-start"
     };
     let bubble_wrap_class = if is_self {
-        "relative group mt-1 cursor-context-menu inline-block max-w-[60%] min-w-0 mr-[68px]"
+        "relative group bubble-wrap mt-1 cursor-context-menu inline-block max-w-[60%] min-w-0 mr-[68px]"
             .to_string()
     } else {
-        "relative group mt-1 cursor-context-menu inline-block max-w-[60%] min-w-0 ml-[68px]"
+        "relative group bubble-wrap mt-1 cursor-context-menu inline-block max-w-[60%] min-w-0 ml-[68px]"
             .to_string()
     };
     let name_wrap_class = if is_self {
@@ -685,27 +680,27 @@ fn MessageBubble(
                     },
                     if !is_image {
                         if !is_self {
-                            div { class: "absolute top-0 -left-[8px] w-[8px] h-[20px] overflow-hidden",
+                            div { class: "absolute top-0 -left-[8px] w-[9px] h-[20px] overflow-hidden",
                                 svg {
-                                    view_box: "0 0 8 20",
+                                    view_box: "0 0 9 20",
                                     width: "100%",
                                     height: "100%",
                                     preserve_aspect_ratio: "none",
                                     path {
-                                        d: "M8,0 L0,0 Q8,0 8,20 Z",
+                                        d: "M9,0 L0,0 Q9,0 9,20 Z",
                                         fill: "{bg_color}",
                                     }
                                 }
                             }
                         } else {
-                            div { class: "absolute top-0 -right-[8px] w-[8px] h-[20px] overflow-hidden",
+                            div { class: "absolute top-0 -right-[8px] w-[9px] h-[20px] overflow-hidden",
                                 svg {
-                                    view_box: "0 0 8 20",
+                                    view_box: "0 0 9 20",
                                     width: "100%",
                                     height: "100%",
                                     preserve_aspect_ratio: "none",
                                     path {
-                                        d: "M0,0 L8,0 Q0,0 0,20 Z",
+                                        d: "M0,0 L9,0 Q0,0 0,20 Z",
                                         fill: "{bg_color}",
                                     }
                                 }

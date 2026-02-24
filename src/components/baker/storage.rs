@@ -12,6 +12,8 @@ use gloo_storage::{LocalStorage, Storage};
 #[cfg(not(target_arch = "wasm32"))]
 use std::fs;
 
+const DEFAULT_STATE_JSON: &str = include_str!("../../../baker_dx_state_default.json");
+
 #[derive(Deserialize)]
 struct LegacyContact {
     pub id: usize,
@@ -174,6 +176,9 @@ pub fn load_state() -> AppState {
                 return state;
             }
         }
+        if let Some(state) = parse_state_from_str(DEFAULT_STATE_JSON) {
+            return state;
+        }
         AppState::default()
     }
 
@@ -184,10 +189,8 @@ pub fn load_state() -> AppState {
                 return state;
             }
         }
-        if let Ok(content) = fs::read_to_string("baker_dx_state_default.json") {
-            if let Some(state) = parse_state_from_str(&content) {
-                return state;
-            }
+        if let Some(state) = parse_state_from_str(DEFAULT_STATE_JSON) {
+            return state;
         }
         AppState::default()
     }
