@@ -153,6 +153,16 @@ fn migrate_legacy_state(legacy: LegacyAppState) -> AppState {
     }
 }
 
+fn parse_state_from_str(raw: &str) -> Option<AppState> {
+    if let Ok(state) = serde_json::from_str(raw) {
+        return Some(state);
+    }
+    if let Ok(legacy) = serde_json::from_str::<LegacyAppState>(raw) {
+        return Some(migrate_legacy_state(legacy));
+    }
+    None
+}
+
 pub fn load_state() -> AppState {
     #[cfg(target_arch = "wasm32")]
     {
@@ -160,11 +170,8 @@ pub fn load_state() -> AppState {
             return state;
         }
         if let Ok(raw) = LocalStorage::get::<String>("baker_dx_state") {
-            if let Ok(state) = serde_json::from_str::<AppState>(&raw) {
+            if let Some(state) = parse_state_from_str(&raw) {
                 return state;
-            }
-            if let Ok(legacy) = serde_json::from_str::<LegacyAppState>(&raw) {
-                return migrate_legacy_state(legacy);
             }
         }
         AppState::default()
@@ -173,11 +180,13 @@ pub fn load_state() -> AppState {
     #[cfg(not(target_arch = "wasm32"))]
     {
         if let Ok(content) = fs::read_to_string("baker_dx_state.json") {
-            if let Ok(state) = serde_json::from_str(&content) {
+            if let Some(state) = parse_state_from_str(&content) {
                 return state;
             }
-            if let Ok(legacy) = serde_json::from_str::<LegacyAppState>(&content) {
-                return migrate_legacy_state(legacy);
+        }
+        if let Ok(content) = fs::read_to_string("baker_dx_state_default.json") {
+            if let Some(state) = parse_state_from_str(&content) {
+                return state;
             }
         }
         AppState::default()
