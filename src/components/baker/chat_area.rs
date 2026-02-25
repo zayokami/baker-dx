@@ -4,6 +4,7 @@ use crate::components::baker::models::{
     ChatHeadStyle, Contact, Message, MessageKind, Operator, UserProfile,
 };
 use dioxus::prelude::*;
+use std::collections::HashMap;
 use std::rc::Rc;
 
 const CHAT_HEAD_LEFT: Asset = asset!("/assets/images/chat_head_left.png");
@@ -125,11 +126,15 @@ pub fn ChatArea(
             .map(|op| op.name.clone())
             .unwrap_or_else(|| "未命名会话".to_string())
     };
+    let operators_map: HashMap<&str, &Operator> = operators_list
+        .iter()
+        .map(|op| (op.id.as_str(), op))
+        .collect();
     let resolve_sender = |sender_id: &str| -> (String, String) {
         if sender_id == user_id {
             return (user_profile.name.clone(), user_profile.avatar_url.clone());
         }
-        if let Some(op) = operators_list.iter().find(|op| op.id == sender_id) {
+        if let Some(op) = operators_map.get(sender_id) {
             return (op.name.clone(), op.avatar_url.clone());
         }
         ("".to_string(), "".to_string())

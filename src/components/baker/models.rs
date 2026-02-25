@@ -37,7 +37,7 @@ pub struct Message {
     pub content: String,
     #[serde(default)]
     pub kind: MessageKind,
-    #[serde(default)]
+    #[serde(skip)]
     pub animate: bool,
 }
 
