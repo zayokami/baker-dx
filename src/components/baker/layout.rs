@@ -174,7 +174,9 @@ async fn open_url(url: String) {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-async fn open_url(_url: String) {}
+async fn open_url(url: String) {
+    let _ = webbrowser::open(&url);
+}
 
 #[component]
 pub fn BakerLayout() -> Element {
