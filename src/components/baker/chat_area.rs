@@ -47,7 +47,7 @@ pub fn ChatArea(
     on_send_image: EventHandler<String>,
     on_delete_message: EventHandler<String>,
     on_edit_message: EventHandler<(String, String)>,
-    on_insert_message: EventHandler<(String, String, bool)>,
+    on_insert_message: EventHandler<(String, String, Option<String>)>,
     on_start_replay: EventHandler<String>,
     on_update_chat_head_style: EventHandler<ChatHeadStyle>,
     on_clear_messages: EventHandler<()>,
@@ -105,9 +105,9 @@ pub fn ChatArea(
         }
         editing_msg_id.set(None);
     };
-    let handle_insert_save = move |(content, is_self): (String, bool)| {
+    let handle_insert_save = move |(content, sender_id): (String, Option<String>)| {
         if let Some(before_id) = insert_before_id() {
-            on_insert_message.call((before_id, content, is_self));
+            on_insert_message.call((before_id, content, sender_id));
         }
         insert_before_id.set(None);
     };
@@ -222,6 +222,7 @@ pub fn ChatArea(
             }
             if insert_before_id().is_some() {
                 InsertMessageModal {
+                    members: selectable_members.clone(),
                     on_close: move |_| insert_before_id.set(None),
                     on_save: handle_insert_save,
                 }

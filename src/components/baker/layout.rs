@@ -413,18 +413,13 @@ pub fn BakerLayout() -> Element {
         }
     };
 
-    let insert_message = move |(before_id, content, is_self): (String, String, bool)| {
+    let insert_message = move |(before_id, content, sender_id_opt): (String, String, Option<String>)| {
         if let Some(contact_id) = selected_contact_id() {
-            let sender_id = if is_self {
-                app_state.read().user_profile.id.clone()
-            } else {
-                app_state
-                    .read()
-                    .contacts
-                    .iter()
-                    .find(|c| c.id == contact_id)
-                    .and_then(|c| c.participant_ids.first().cloned())
-                    .unwrap_or(contact_id.clone())
+            let sender_id = match sender_id_opt {
+                // 我方
+                None => app_state.read().user_profile.id.clone(),
+                // 指定发送者（单聊对方或群组选定成员）
+                Some(id) => id,
             };
             let new_id = {
                 let mut state = app_state.write();
