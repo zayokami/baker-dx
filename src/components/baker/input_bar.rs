@@ -34,10 +34,11 @@ pub fn InputBar(
             text.set(String::new());
         }
     };
-    let handle_submit_other = move || {
+    let mut handle_submit_other = move || {
         let val = text.read().clone();
         if !val.trim().is_empty() {
             on_send_other.call(val);
+            text.set(String::new());
         }
     };
     let mut handle_submit_status = move || {
