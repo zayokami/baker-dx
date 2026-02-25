@@ -664,7 +664,7 @@ pub fn BakerLayout() -> Element {
         }
         None
     });
-    let background_style = {
+    let background_style = use_memo(move || {
         let bg = app_state.read().background.clone();
         match bg.mode {
             BackgroundMode::DotDark => {
@@ -682,7 +682,7 @@ pub fn BakerLayout() -> Element {
                 }
             }
         }
-    };
+    });
 
     rsx! {
         div {
