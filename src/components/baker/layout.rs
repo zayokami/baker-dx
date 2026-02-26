@@ -670,7 +670,7 @@ pub fn BakerLayout() -> Element {
                             });
                         });
                         play_message_sound(true);
-                        schedule_animate_off_in_list(replay_messages_async, msg.id);
+                        schedule_animate_off_in_list(replay_messages_async, msg.id.clone());
                         if !msg.reactions.is_empty() {
                             if settings_clone.gap_ms > 0 {
                                 sleep_ms(settings_clone.gap_ms).await;
