@@ -495,6 +495,55 @@ pub fn EditMessageModal(
 }
 
 #[component]
+pub fn ReactionModal(on_close: EventHandler<()>, on_save: EventHandler<String>) -> Element {
+    let mut reaction = use_signal(|| "".to_string());
+
+    rsx! {
+        div {
+            class: "fixed inset-0 bg-black/50 flex items-center justify-center z-50 backdrop-blur-sm",
+            onclick: move |_| on_close.call(()),
+            div {
+                class: "bg-[#2b2b2b] w-[360px] rounded-xl shadow-2xl overflow-hidden border border-gray-600",
+                onclick: |e| e.stop_propagation(),
+                div { class: "px-6 py-4 border-b border-gray-600 flex justify-between items-center bg-[#333]",
+                    h2 { class: "text-white text-lg font-bold", "添加反应" }
+                    button {
+                        class: "text-gray-400 hover:text-white transition-colors",
+                        onclick: move |_| on_close.call(()),
+                        "✕"
+                    }
+                }
+                div { class: "p-4 space-y-4",
+                    input {
+                        class: "w-full bg-[#222] border border-gray-600 rounded px-3 py-2 text-white text-sm focus:outline-none focus:border-blue-500",
+                        placeholder: "输入 reaction（例如 😀）",
+                        value: "{reaction}",
+                        oninput: move |e| reaction.set(e.value()),
+                    }
+                    div { class: "flex justify-end gap-3",
+                        button {
+                            class: "px-4 py-2 text-gray-400 hover:text-white text-sm",
+                            onclick: move |_| on_close.call(()),
+                            "取消"
+                        }
+                        button {
+                            class: "px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded text-sm font-medium",
+                            onclick: move |_| {
+                                let val = reaction();
+                                if !val.trim().is_empty() {
+                                    on_save.call(val);
+                                }
+                            },
+                            "添加"
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+#[component]
 pub fn UpdateAvailableModal(
     latest_version: String,
     release_url: String,

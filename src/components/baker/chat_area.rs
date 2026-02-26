@@ -1,5 +1,7 @@
 use crate::components::baker::input_bar::InputBar;
-use crate::components::baker::modals::{EditMessageModal, InsertMessageModal, PickSenderModal};
+use crate::components::baker::modals::{
+    EditMessageModal, InsertMessageModal, PickSenderModal, ReactionModal,
+};
 use crate::components::baker::models::{
     ChatHeadStyle, Contact, Message, MessageKind, Operator, UserProfile,
 };
@@ -48,6 +50,8 @@ pub fn ChatArea(
     on_send_image: EventHandler<String>,
     on_delete_message: EventHandler<String>,
     on_edit_message: EventHandler<(String, String)>,
+    on_add_reaction: EventHandler<(String, String)>,
+    on_delete_reaction: EventHandler<String>,
     on_insert_message: EventHandler<(String, String, Option<String>)>,
     on_start_replay: EventHandler<String>,
     on_update_chat_head_style: EventHandler<ChatHeadStyle>,
@@ -58,6 +62,7 @@ pub fn ChatArea(
     let mut context_menu = use_signal(|| Option::<(i32, i32, String)>::None);
     let mut editing_msg_id = use_signal(|| Option::<String>::None);
     let mut insert_before_id = use_signal(|| Option::<String>::None);
+    let mut reaction_msg_id = use_signal(|| Option::<String>::None);
     let mut header_menu_open = use_signal(|| false);
     let mut show_pick_sender = use_signal(|| false);
     let mut pick_sender_text = use_signal(|| "".to_string());
@@ -112,6 +117,16 @@ pub fn ChatArea(
         }
         insert_before_id.set(None);
     };
+    let handle_reaction_save = move |reaction: String| {
+        if let Some(id) = reaction_msg_id() {
+            on_add_reaction.call((id, reaction));
+        }
+        reaction_msg_id.set(None);
+    };
+    let mut handle_delete_reaction = move |id: String| {
+        on_delete_reaction.call(id);
+        context_menu.set(None);
+    };
     let user_id = user_profile.id.clone();
     let user_profile = Rc::new(user_profile);
     let first_prev_sender_id = first_prev_sender_id.clone();
@@ -144,6 +159,93 @@ pub fn ChatArea(
         .iter()
         .filter_map(|id| operators_list.iter().find(|op| op.id == *id).cloned())
         .collect::<Vec<_>>();
+    let context_menu_value = context_menu();
+    let context_menu_view = context_menu_value.as_ref().map(|(x, y, msg_id)| {
+        let show_reaction = messages_list
+            .iter()
+            .find(|m| m.id == *msg_id)
+            .map(|m| !matches!(m.kind, MessageKind::Status))
+            .unwrap_or(false);
+        let show_delete_reaction = messages_list
+            .iter()
+            .find(|m| m.id == *msg_id)
+            .map(|m| !m.reactions.is_empty())
+            .unwrap_or(false);
+        let x = *x;
+        let y = *y;
+        let msg_id = msg_id.clone();
+        rsx! {
+            div {
+                class: "fixed z-[100] bg-[#2b2b2b] border border-gray-600 rounded shadow-xl py-1 w-32",
+                style: "{menu_style(x, y, 128, 256)}",
+                onclick: |e| e.stop_propagation(),
+                div {
+                    class: "px-4 py-2 hover:bg-[#3a3a3a] cursor-pointer text-white text-sm transition-colors",
+                    onclick: {
+                        let msg_id = msg_id.clone();
+                        move |_| {
+                            editing_msg_id.set(Some(msg_id.clone()));
+                            context_menu.set(None);
+                        }
+                    },
+                    "修改消息"
+                }
+                if show_reaction {
+                    div {
+                        class: "px-4 py-2 hover:bg-[#3a3a3a] cursor-pointer text-white text-sm transition-colors",
+                        onclick: {
+                            let msg_id = msg_id.clone();
+                            move |_| {
+                                reaction_msg_id.set(Some(msg_id.clone()));
+                                context_menu.set(None);
+                            }
+                        },
+                        "反应…"
+                    }
+                }
+                if show_delete_reaction {
+                    div {
+                        class: "px-4 py-2 hover:bg-[#3a3a3a] cursor-pointer text-white text-sm transition-colors",
+                        onclick: {
+                            let msg_id = msg_id.clone();
+                            move |_| handle_delete_reaction(msg_id.clone())
+                        },
+                        "删除反应"
+                    }
+                }
+                div {
+                    class: "px-4 py-2 hover:bg-[#3a3a3a] cursor-pointer text-white text-sm transition-colors",
+                    onclick: {
+                        let msg_id = msg_id.clone();
+                        move |_| {
+                            insert_before_id.set(Some(msg_id.clone()));
+                            context_menu.set(None);
+                        }
+                    },
+                    "在此前插入…"
+                }
+                div {
+                    class: "px-4 py-2 hover:bg-[#3a3a3a] cursor-pointer text-white text-sm transition-colors",
+                    onclick: {
+                        let msg_id = msg_id.clone();
+                        move |_| {
+                            on_start_replay.call(msg_id.clone());
+                            context_menu.set(None);
+                        }
+                    },
+                    "从此开始回放…"
+                }
+                div {
+                    class: "px-4 py-2 hover:bg-[#3a3a3a] cursor-pointer text-red-400 text-sm transition-colors",
+                    onclick: {
+                        let msg_id = msg_id.clone();
+                        move |_| handle_delete(msg_id.clone())
+                    },
+                    "删除消息"
+                }
+            }
+        }
+    });
     enum ChatRow {
         Status {
             id: String,
@@ -158,6 +260,7 @@ pub fn ChatArea(
             pending_phase: Option<ReplayTypingPhase>,
             sender_name: String,
             sender_avatar: String,
+            reaction_labels: Vec<String>,
         },
     }
     let mut message_rows = Vec::new();
@@ -195,6 +298,18 @@ pub fn ChatArea(
             }
         });
         let (sender_name, sender_avatar) = resolve_sender(&msg.sender_id);
+        let reaction_labels = msg
+            .reactions
+            .iter()
+            .map(|reaction| {
+                let (reaction_sender_name, _) = resolve_sender(&reaction.sender_id);
+                if reaction_sender_name.is_empty() {
+                    format!("{}", reaction.content)
+                } else {
+                    format!("{} {}", reaction.content, reaction_sender_name)
+                }
+            })
+            .collect::<Vec<_>>();
         message_rows.push(ChatRow::Message {
             msg: msg.clone(),
             is_self,
@@ -204,6 +319,7 @@ pub fn ChatArea(
             pending_phase,
             sender_name,
             sender_avatar,
+            reaction_labels,
         });
         last_sender_id = Some(msg.sender_id.clone());
     }
@@ -232,6 +348,12 @@ pub fn ChatArea(
                     on_save: handle_insert_save,
                 }
             }
+            if reaction_msg_id().is_some() {
+                ReactionModal {
+                    on_close: move |_| reaction_msg_id.set(None),
+                    on_save: handle_reaction_save,
+                }
+            }
             if show_pick_sender() {
                 PickSenderModal {
                     members: selectable_members.clone(),
@@ -248,54 +370,7 @@ pub fn ChatArea(
                 }
             }
 
-            if let Some((x, y, msg_id)) = context_menu() {
-                div {
-                    class: "fixed z-[100] bg-[#2b2b2b] border border-gray-600 rounded shadow-xl py-1 w-32",
-                    style: "{menu_style(x, y, 128, 176)}",
-                    onclick: |e| e.stop_propagation(),
-                    div {
-                        class: "px-4 py-2 hover:bg-[#3a3a3a] cursor-pointer text-white text-sm transition-colors",
-                        onclick: {
-                            let msg_id = msg_id.clone();
-                            move |_| {
-                                editing_msg_id.set(Some(msg_id.clone()));
-                                context_menu.set(None);
-                            }
-                        },
-                        "修改消息"
-                    }
-                    div {
-                        class: "px-4 py-2 hover:bg-[#3a3a3a] cursor-pointer text-white text-sm transition-colors",
-                        onclick: {
-                            let msg_id = msg_id.clone();
-                            move |_| {
-                                insert_before_id.set(Some(msg_id.clone()));
-                                context_menu.set(None);
-                            }
-                        },
-                        "在此前插入…"
-                    }
-                    div {
-                        class: "px-4 py-2 hover:bg-[#3a3a3a] cursor-pointer text-white text-sm transition-colors",
-                        onclick: {
-                            let msg_id = msg_id.clone();
-                            move |_| {
-                                on_start_replay.call(msg_id.clone());
-                                context_menu.set(None);
-                            }
-                        },
-                        "从此开始回放…"
-                    }
-                    div {
-                        class: "px-4 py-2 hover:bg-[#3a3a3a] cursor-pointer text-red-400 text-sm transition-colors",
-                        onclick: {
-                            let msg_id = msg_id.clone();
-                            move |_| handle_delete(msg_id.clone())
-                        },
-                        "删除消息"
-                    }
-                }
-            }
+            {context_menu_view}
 
             div { class: "h-14 flex items-stretch shrink-0 mb-1 relative",
                 {
@@ -470,6 +545,7 @@ pub fn ChatArea(
                                 pending_phase,
                                 sender_name,
                                 sender_avatar,
+                                reaction_labels,
                             } => {
                                 let row_key = msg_id.clone();
                                 rsx! {
@@ -482,6 +558,7 @@ pub fn ChatArea(
                                             sender_name,
                                             sender_avatar,
                                             pending_phase,
+                                            reaction_labels,
                                             user_profile: user_profile.clone(),
                                             on_context_menu: move |evt: MouseEvent| {
                                                 context_menu
@@ -538,6 +615,7 @@ fn MessageBubble(
     sender_name: String,
     sender_avatar: String,
     pending_phase: Option<ReplayTypingPhase>,
+    reaction_labels: Vec<String>,
     user_profile: Rc<UserProfile>,
     on_context_menu: EventHandler<MouseEvent>,
 ) -> Element {
@@ -630,6 +708,12 @@ fn MessageBubble(
     } else {
         "relative group bubble-wrap mt-1 cursor-context-menu inline-block max-w-[60%] min-w-0 ml-[68px]"
             .to_string()
+    };
+    let reaction_wrap_class = "mt-2 flex gap-1 items-center flex-wrap";
+    let reaction_align_class = if is_self {
+        "justify-end"
+    } else {
+        "justify-start"
     };
     let name_wrap_class = if is_self {
         "w-full flex justify-end pr-[68px]"
@@ -737,6 +821,17 @@ fn MessageBubble(
                                 }
                             } else {
                                 div { style: "{text_anim_style}", "{message.content}" }
+                            }
+                            if !reaction_labels.is_empty() {
+                                div { class: "{reaction_wrap_class} {reaction_align_class}",
+                                    for label in reaction_labels.iter().cloned() {
+                                        span {
+                                            class: "px-2 py-0.5 text-base rounded-full text-gray-200",
+                                            style: "background-color: rgb(60, 60, 60); opacity: 0; animation: textFadeIn 0.2s ease-out 0.05s forwards;",
+                                            "{label}"
+                                        }
+                                    }
+                                }
                             }
                         }
                     }

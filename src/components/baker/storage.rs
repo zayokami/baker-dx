@@ -134,6 +134,7 @@ fn migrate_legacy_state(legacy: LegacyAppState) -> AppState {
                     content,
                     kind: MessageKind::Normal,
                     animate,
+                    reactions: Vec::new(),
                 }
             })
             .collect::<Vec<_>>();
