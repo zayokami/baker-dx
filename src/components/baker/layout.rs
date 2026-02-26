@@ -4,7 +4,7 @@ use crate::components::baker::modals::{
     ReplaySettingsModal, SettingsModal, TutorialModal, UpdateAvailableModal,
 };
 use crate::components::baker::models::{
-    BackgroundMode, ChatHeadStyle, Contact, Message, MessageKind,
+    BackgroundMode, ChatHeadStyle, Contact, Message, MessageKind, MessageReaction,
 };
 use crate::components::baker::sidebar::Sidebar;
 use crate::components::baker::storage::{load_state, save_state};
@@ -224,6 +224,7 @@ pub fn BakerLayout() -> Element {
                 content,
                 kind,
                 animate: true,
+                reactions: Vec::new(),
             });
             new_id
         };
@@ -400,6 +401,36 @@ pub fn BakerLayout() -> Element {
         }
     };
 
+    let add_reaction = move |(msg_id, reaction): (String, String)| {
+        let reaction = reaction.trim().to_string();
+        if reaction.is_empty() {
+            return;
+        }
+        let sender_id = app_state.read().user_profile.id.clone();
+        if let Some(contact_id) = selected_contact_id() {
+            let mut state = app_state.write();
+            if let Some(msgs) = state.messages.get_mut(&contact_id) {
+                if let Some(msg) = msgs.iter_mut().find(|m| m.id == msg_id) {
+                    msg.reactions.push(MessageReaction {
+                        content: reaction,
+                        sender_id,
+                    });
+                }
+            }
+        }
+    };
+
+    let delete_reaction = move |msg_id: String| {
+        if let Some(contact_id) = selected_contact_id() {
+            let mut state = app_state.write();
+            if let Some(msgs) = state.messages.get_mut(&contact_id) {
+                if let Some(msg) = msgs.iter_mut().find(|m| m.id == msg_id) {
+                    msg.reactions.clear();
+                }
+            }
+        }
+    };
+
     let insert_message = move |(before_id, content, is_self): (String, String, bool)| {
         if let Some(contact_id) = selected_contact_id() {
             let sender_id = if is_self {
@@ -433,6 +464,7 @@ pub fn BakerLayout() -> Element {
                         content,
                         kind: MessageKind::Normal,
                         animate: true,
+                        reactions: Vec::new(),
                     },
                 );
                 new_id
@@ -596,6 +628,7 @@ pub fn BakerLayout() -> Element {
                         replay_messages_async.with_mut(|list| {
                             list.push(Message {
                                 animate: true,
+                                reactions: Vec::new(),
                                 ..msg.clone()
                             });
                         });
@@ -623,6 +656,18 @@ pub fn BakerLayout() -> Element {
                         play_message_sound(false);
                         sleep_ms(200).await;
                         replay_pending_async.set(None);
+                        if !msg.reactions.is_empty() {
+                            if settings_clone.gap_ms > 0 {
+                                sleep_ms(settings_clone.gap_ms).await;
+                            }
+                            let reactions = msg.reactions.clone();
+                            let msg_id = msg.id.clone();
+                            replay_messages_async.with_mut(|list| {
+                                if let Some(item) = list.iter_mut().find(|m| m.id == msg_id) {
+                                    item.reactions = reactions;
+                                }
+                            });
+                        }
                     } else {
                         replay_pending_async.set(None);
                         if typing_ms > 0 {
@@ -631,12 +676,13 @@ pub fn BakerLayout() -> Element {
                         replay_messages_async.with_mut(|list| {
                             list.push(Message {
                                 animate: true,
+                                reactions: Vec::new(),
                                 ..msg.clone()
                             });
                         });
                         play_message_sound(true);
                         let mut replay_messages_anim = replay_messages_async;
-                        let msg_id = msg.id;
+                        let msg_id = msg.id.clone();
                         spawn(async move {
                             sleep_ms(220).await;
                             replay_messages_anim.with_mut(|list| {
@@ -645,6 +691,18 @@ pub fn BakerLayout() -> Element {
                                 }
                             });
                         });
+                        if !msg.reactions.is_empty() {
+                            if settings_clone.gap_ms > 0 {
+                                sleep_ms(settings_clone.gap_ms).await;
+                            }
+                            let reactions = msg.reactions.clone();
+                            let msg_id = msg.id.clone();
+                            replay_messages_async.with_mut(|list| {
+                                if let Some(item) = list.iter_mut().find(|m| m.id == msg_id) {
+                                    item.reactions = reactions;
+                                }
+                            });
+                        }
                     }
                 }
                 replay_pending_async.set(None);
@@ -844,6 +902,8 @@ pub fn BakerLayout() -> Element {
                                 on_send_image: handle_send_image,
                                 on_delete_message: delete_message,
                                 on_edit_message: edit_message,
+                                on_add_reaction: add_reaction,
+                                on_delete_reaction: delete_reaction,
                                 on_insert_message: insert_message,
                                 on_start_replay: move |msg_id| replay_request_msg_id.set(Some(msg_id)),
                                 on_update_chat_head_style: update_chat_head_style,

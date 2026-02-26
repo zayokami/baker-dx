@@ -1,4 +1,4 @@
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 use std::collections::HashMap;
 use uuid::Uuid;
 
@@ -30,6 +30,34 @@ pub enum MessageKind {
     Image,
 }
 
+#[derive(Clone, PartialEq, Debug, Serialize)]
+pub struct MessageReaction {
+    pub content: String,
+    pub sender_id: String,
+}
+
+impl<'de> Deserialize<'de> for MessageReaction {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        #[derive(Deserialize)]
+        #[serde(untagged)]
+        enum Helper {
+            Simple(String),
+            Full { content: String, sender_id: String },
+        }
+
+        match Helper::deserialize(deserializer)? {
+            Helper::Simple(content) => Ok(Self {
+                content,
+                sender_id: String::new(),
+            }),
+            Helper::Full { content, sender_id } => Ok(Self { content, sender_id }),
+        }
+    }
+}
+
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub struct Message {
     pub id: String,
@@ -39,6 +67,8 @@ pub struct Message {
     pub kind: MessageKind,
     #[serde(default)]
     pub animate: bool,
+    #[serde(default)]
+    pub reactions: Vec<MessageReaction>,
 }
 
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
