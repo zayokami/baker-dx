@@ -75,6 +75,32 @@ async fn sleep_ms(ms: u64) {
     sleep(Duration::from_millis(ms)).await;
 }
 
+fn schedule_animate_off_in_state(
+    mut app_state: Signal<crate::components::baker::models::AppState>,
+    contact_id: String,
+    msg_id: String,
+) {
+    spawn(async move {
+        sleep_ms(220).await;
+        if let Some(msgs) = app_state.write().messages.get_mut(&contact_id) {
+            if let Some(msg) = msgs.iter_mut().find(|m| m.id == msg_id) {
+                msg.animate = false;
+            }
+        }
+    });
+}
+
+fn schedule_animate_off_in_list(mut list: Signal<Vec<Message>>, msg_id: String) {
+    spawn(async move {
+        sleep_ms(220).await;
+        list.with_mut(|msgs| {
+            if let Some(msg) = msgs.iter_mut().find(|m| m.id == msg_id) {
+                msg.animate = false;
+            }
+        });
+    });
+}
+
 fn parse_version(input: &str) -> Option<Vec<u64>> {
     let trimmed = input.trim();
     let without_prefix = trimmed.strip_prefix('v').unwrap_or(trimmed);
@@ -148,7 +174,9 @@ async fn open_url(url: String) {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-async fn open_url(_url: String) {}
+async fn open_url(url: String) {
+    let _ = webbrowser::open(&url);
+}
 
 #[component]
 pub fn BakerLayout() -> Element {
@@ -229,20 +257,7 @@ pub fn BakerLayout() -> Element {
             new_id
         };
         play_message_sound(is_self);
-
-        let mut app_state_for_anim = app_state;
-        spawn(async move {
-            sleep_ms(220).await;
-            if let Some(msgs) = app_state_for_anim
-                .write()
-                .messages
-                .get_mut(&current_contact_id)
-            {
-                if let Some(msg) = msgs.iter_mut().find(|m| m.id == new_id) {
-                    msg.animate = false;
-                }
-            }
-        });
+        schedule_animate_off_in_state(app_state, current_contact_id, new_id);
     };
 
     let handle_send = move |content: String| {
@@ -431,18 +446,13 @@ pub fn BakerLayout() -> Element {
         }
     };
 
-    let insert_message = move |(before_id, content, is_self): (String, String, bool)| {
+    let insert_message = move |(before_id, content, sender_id_opt): (String, String, Option<String>)| {
         if let Some(contact_id) = selected_contact_id() {
-            let sender_id = if is_self {
-                app_state.read().user_profile.id.clone()
-            } else {
-                app_state
-                    .read()
-                    .contacts
-                    .iter()
-                    .find(|c| c.id == contact_id)
-                    .and_then(|c| c.participant_ids.first().cloned())
-                    .unwrap_or(contact_id.clone())
+            let sender_id = match sender_id_opt {
+                // 我方
+                None => app_state.read().user_profile.id.clone(),
+                // 指定发送者（单聊对方或群组选定成员）
+                Some(id) => id,
             };
             let new_id = {
                 let mut state = app_state.write();
@@ -470,15 +480,7 @@ pub fn BakerLayout() -> Element {
                 new_id
             };
 
-            let mut app_state_for_anim = app_state;
-            spawn(async move {
-                sleep_ms(220).await;
-                if let Some(msgs) = app_state_for_anim.write().messages.get_mut(&contact_id) {
-                    if let Some(msg) = msgs.iter_mut().find(|m| m.id == new_id) {
-                        msg.animate = false;
-                    }
-                }
-            });
+            schedule_animate_off_in_state(app_state, contact_id, new_id);
         }
     };
 
@@ -603,23 +605,19 @@ pub fn BakerLayout() -> Element {
                         });
                         let is_self = msg.sender_id == user_id;
                         play_message_sound(is_self);
-                        let mut replay_messages_anim = replay_messages_async;
-                        let msg_id = msg.id;
-                        spawn(async move {
-                            sleep_ms(220).await;
-                            replay_messages_anim.with_mut(|list| {
-                                if let Some(item) = list.iter_mut().find(|m| m.id == msg_id) {
-                                    item.animate = false;
-                                }
-                            });
-                        });
+                        schedule_animate_off_in_list(replay_messages_async, msg.id);
                         continue;
                     }
-                    let typing_ms = match settings_clone.mode {
-                        ReplayIntervalMode::Fixed => settings_clone.fixed_ms,
-                        ReplayIntervalMode::PerChar => {
-                            let len = msg.content.chars().count() as u64;
-                            len.saturating_mul(settings_clone.per_char_ms)
+                    let typing_ms = if matches!(msg.kind, MessageKind::Image) {
+                        // 图片消息内容是 data URL，字符数极大，按字数模式下强制走固定时长
+                        settings_clone.fixed_ms
+                    } else {
+                        match settings_clone.mode {
+                            ReplayIntervalMode::Fixed => settings_clone.fixed_ms,
+                            ReplayIntervalMode::PerChar => {
+                                let len = msg.content.chars().count() as u64;
+                                len.saturating_mul(settings_clone.per_char_ms)
+                            }
                         }
                     };
                     let is_other = msg.sender_id != user_id;
@@ -636,16 +634,7 @@ pub fn BakerLayout() -> Element {
                             id: msg_id.clone(),
                             phase: ReplayTypingPhase::Typing,
                         }));
-                        let mut replay_messages_anim = replay_messages_async;
-                        let msg_id_anim = msg_id.clone();
-                        spawn(async move {
-                            sleep_ms(220).await;
-                            replay_messages_anim.with_mut(|list| {
-                                if let Some(item) = list.iter_mut().find(|m| m.id == msg_id_anim) {
-                                    item.animate = false;
-                                }
-                            });
-                        });
+                        schedule_animate_off_in_list(replay_messages_async, msg_id.clone());
                         if typing_ms > 0 {
                             sleep_ms(typing_ms).await;
                         }
@@ -681,16 +670,7 @@ pub fn BakerLayout() -> Element {
                             });
                         });
                         play_message_sound(true);
-                        let mut replay_messages_anim = replay_messages_async;
-                        let msg_id = msg.id.clone();
-                        spawn(async move {
-                            sleep_ms(220).await;
-                            replay_messages_anim.with_mut(|list| {
-                                if let Some(item) = list.iter_mut().find(|m| m.id == msg_id) {
-                                    item.animate = false;
-                                }
-                            });
-                        });
+                        schedule_animate_off_in_list(replay_messages_async, msg.id.clone());
                         if !msg.reactions.is_empty() {
                             if settings_clone.gap_ms > 0 {
                                 sleep_ms(settings_clone.gap_ms).await;
@@ -722,7 +702,7 @@ pub fn BakerLayout() -> Element {
         }
         None
     });
-    let background_style = {
+    let background_style = use_memo(move || {
         let bg = app_state.read().background.clone();
         match bg.mode {
             BackgroundMode::DotDark => {
@@ -740,7 +720,7 @@ pub fn BakerLayout() -> Element {
                 }
             }
         }
-    };
+    });
 
     rsx! {
         div {

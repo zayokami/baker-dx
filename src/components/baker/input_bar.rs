@@ -1,26 +1,6 @@
+use crate::components::baker::{data_url_from_bytes, mime_from_filename};
 use crate::dioxus_elements::FileData;
-use base64::Engine;
 use dioxus::prelude::*;
-
-fn mime_from_filename(name: &str) -> &'static str {
-    match name
-        .rsplit('.')
-        .next()
-        .map(|ext| ext.to_lowercase())
-        .as_deref()
-    {
-        Some("png") => "image/png",
-        Some("jpg") | Some("jpeg") => "image/jpeg",
-        Some("gif") => "image/gif",
-        Some("webp") => "image/webp",
-        _ => "application/octet-stream",
-    }
-}
-
-fn data_url_from_bytes(mime: &str, bytes: Vec<u8>) -> String {
-    let encoded = base64::engine::general_purpose::STANDARD.encode(bytes);
-    format!("data:{mime};base64,{encoded}")
-}
 
 fn menu_style(x: i32, y: i32, width: i32, height: i32) -> String {
     format!(
@@ -54,10 +34,11 @@ pub fn InputBar(
             text.set(String::new());
         }
     };
-    let handle_submit_other = move || {
+    let mut handle_submit_other = move || {
         let val = text.read().clone();
         if !val.trim().is_empty() {
             on_send_other.call(val);
+            text.set(String::new());
         }
     };
     let mut handle_submit_status = move || {

@@ -1,28 +1,8 @@
 use crate::components::baker::models::{BackgroundMode, BackgroundSettings, Operator};
+use crate::components::baker::{data_url_from_bytes, mime_from_filename};
 use crate::dioxus_elements::FileData;
-use base64::Engine;
 use dioxus::prelude::*;
 use uuid::Uuid;
-
-fn mime_from_filename(name: &str) -> &'static str {
-    match name
-        .rsplit('.')
-        .next()
-        .map(|ext| ext.to_lowercase())
-        .as_deref()
-    {
-        Some("png") => "image/png",
-        Some("jpg") | Some("jpeg") => "image/jpeg",
-        Some("gif") => "image/gif",
-        Some("webp") => "image/webp",
-        _ => "application/octet-stream",
-    }
-}
-
-fn data_url_from_bytes(mime: &str, bytes: Vec<u8>) -> String {
-    let encoded = base64::engine::general_purpose::STANDARD.encode(bytes);
-    format!("data:{mime};base64,{encoded}")
-}
 
 #[derive(Clone, PartialEq)]
 pub enum ReplayIntervalMode {
@@ -680,11 +660,16 @@ pub fn PickSenderModal(
 
 #[component]
 pub fn InsertMessageModal(
+    members: Vec<Operator>,
     on_close: EventHandler<()>,
-    on_save: EventHandler<(String, bool)>,
+    on_save: EventHandler<(String, Option<String>)>,
 ) -> Element {
     let mut content = use_signal(String::new);
     let mut is_self = use_signal(|| true);
+    // 群组模式下，选"对方"后弹出成员选择
+    let mut pick_sender = use_signal(|| false);
+
+    let is_group = members.len() > 1;
 
     let self_class = if is_self() {
         "bg-blue-600 text-white"
@@ -696,6 +681,22 @@ pub fn InsertMessageModal(
     } else {
         "bg-[#3a3a3a] text-gray-300"
     };
+
+    if pick_sender() {
+        return rsx! {
+            PickSenderModal {
+                members,
+                on_close: move |_| pick_sender.set(false),
+                on_send: move |sender_id: String| {
+                    let val = content();
+                    if !val.trim().is_empty() {
+                        on_save.call((val, Some(sender_id)));
+                    }
+                    pick_sender.set(false);
+                },
+            }
+        };
+    }
 
     rsx! {
         div {
@@ -742,8 +743,18 @@ pub fn InsertMessageModal(
                             class: "px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded text-sm font-medium",
                             onclick: move |_| {
                                 let val = content();
-                                if !val.trim().is_empty() {
-                                    on_save.call((val, is_self()));
+                                if val.trim().is_empty() {
+                                    return;
+                                }
+                                if is_self() {
+                                    // 我方：sender_id 由 layout 填入，传 None
+                                    on_save.call((val, None));
+                                } else if is_group {
+                                    // 群组对方：先选成员
+                                    pick_sender.set(true);
+                                } else {
+                                    // 单聊对方：sender_id 由 layout 取联系人第一个成员
+                                    on_save.call((val, members.first().map(|op| op.id.clone())));
                                 }
                             },
                             "插入"
