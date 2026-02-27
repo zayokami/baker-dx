@@ -68,6 +68,8 @@ pub struct Message {
     pub kind: MessageKind,
     #[serde(skip)]
     pub animate: bool,
+    #[serde(skip)]
+    pub animate_reactions: bool,
     #[serde(default)]
     pub reactions: Vec<MessageReaction>,
 }

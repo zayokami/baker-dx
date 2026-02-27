@@ -858,7 +858,7 @@ fn MessageBubble(
                                     for label in reaction_labels.iter().cloned() {
                                         span {
                                             class: "px-2 py-0.5 text-base rounded-full text-gray-200",
-                                            style: "background-color: rgb(60, 60, 60); opacity: 0; animation: textFadeIn 0.2s ease-out 0.05s forwards;",
+                                            style: if message.animate_reactions { "background-color: rgb(60, 60, 60); opacity: 0; animation: textFadeIn 0.2s ease-out 0.05s forwards;" } else { "background-color: rgb(60, 60, 60); opacity: 1;" },
                                             "{label}"
                                         }
                                     }

@@ -3,6 +3,7 @@ pub mod input_bar;
 pub mod layout;
 pub mod modals;
 pub mod models;
+pub mod settings;
 pub mod sidebar;
 pub mod storage;
 
