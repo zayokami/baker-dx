@@ -298,15 +298,25 @@ pub fn ChatArea(
             }
         });
         let (sender_name, sender_avatar) = resolve_sender(&msg.sender_id);
-        let reaction_labels = msg
-            .reactions
-            .iter()
-            .map(|reaction| {
-                let (reaction_sender_name, _) = resolve_sender(&reaction.sender_id);
-                if reaction_sender_name.is_empty() {
-                    format!("{}", reaction.content)
+        // 将相同表情内容的反应用计数形式合并显示，例如 "😀 x3"
+        let mut reaction_counts: Vec<(String, u32)> = Vec::new();
+        for reaction in &msg.reactions {
+            if let Some((_, count)) = reaction_counts
+                .iter_mut()
+                .find(|(content, _)| content == &reaction.content)
+            {
+                *count += 1;
+            } else {
+                reaction_counts.push((reaction.content.clone(), 1));
+            }
+        }
+        let reaction_labels = reaction_counts
+            .into_iter()
+            .map(|(content, count)| {
+                if count > 1 {
+                    format!("{content} x{count}")
                 } else {
-                    format!("{} {}", reaction.content, reaction_sender_name)
+                    content
                 }
             })
             .collect::<Vec<_>>();
