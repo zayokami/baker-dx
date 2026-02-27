@@ -1,4 +1,4 @@
-use crate::components::baker::{data_url_from_bytes, mime_from_filename};
+use crate::components::baker::{avif_data_url_from_bytes, data_url_from_bytes, mime_from_filename};
 use crate::dioxus_elements::FileData;
 use dioxus::prelude::*;
 
@@ -125,7 +125,9 @@ pub fn InputBar(
                                     let send_image = on_send_image;
                                     spawn(async move {
                                         if let Ok(bytes) = file.read_bytes().await {
-                                            let data_url = data_url_from_bytes(&mime, bytes.to_vec());
+                                            let bytes_vec = bytes.to_vec();
+                                            let data_url = avif_data_url_from_bytes(bytes_vec.clone())
+                                                .unwrap_or_else(|| data_url_from_bytes(&mime, bytes_vec));
                                             send_image.call(data_url);
                                             token.set(token() + 1);
                                         }
@@ -167,7 +169,9 @@ pub fn InputBar(
                                                 let mut token = sticker_input_token;
                                                 spawn(async move {
                                                     if let Ok(bytes) = file.read_bytes().await {
-                                                        let data_url = data_url_from_bytes(&mime, bytes.to_vec());
+                                                        let bytes_vec = bytes.to_vec();
+                                                        let data_url = avif_data_url_from_bytes(bytes_vec.clone())
+                                                            .unwrap_or_else(|| data_url_from_bytes(&mime, bytes_vec));
                                                         add_sticker.call(data_url);
                                                         token.set(token() + 1);
                                                     }

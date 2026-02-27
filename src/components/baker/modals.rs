@@ -1,5 +1,5 @@
 use crate::components::baker::models::{BackgroundMode, BackgroundSettings, Operator};
-use crate::components::baker::{data_url_from_bytes, mime_from_filename};
+use crate::components::baker::{avif_data_url_from_bytes, data_url_from_bytes, mime_from_filename};
 use crate::dioxus_elements::FileData;
 use dioxus::prelude::*;
 use uuid::Uuid;
@@ -226,7 +226,9 @@ pub fn SettingsModal(
                                         let mut preview = new_avatar_preview;
                                         spawn(async move {
                                             if let Ok(bytes) = file.read_bytes().await {
-                                                let data_url = data_url_from_bytes(&mime, bytes.to_vec());
+                                                let bytes_vec = bytes.to_vec();
+                                                let data_url = avif_data_url_from_bytes(bytes_vec.clone())
+                                                    .unwrap_or_else(|| data_url_from_bytes(&mime, bytes_vec));
                                                 preview.set(data_url);
                                             }
                                         });
@@ -330,7 +332,9 @@ pub fn SettingsModal(
                                             let mut bg = background;
                                             spawn(async move {
                                                 if let Ok(bytes) = file.read_bytes().await {
-                                                    let data_url = data_url_from_bytes(&mime, bytes.to_vec());
+                                                    let bytes_vec = bytes.to_vec();
+                                                    let data_url = avif_data_url_from_bytes(bytes_vec.clone())
+                                                        .unwrap_or_else(|| data_url_from_bytes(&mime, bytes_vec));
                                                     let mut settings = bg.write();
                                                     settings.custom_image = data_url;
                                                     settings.mode = BackgroundMode::CustomImage;
@@ -401,7 +405,9 @@ pub fn ProfileModal(
                                         let mut preview = avatar_preview;
                                         spawn(async move {
                                             if let Ok(bytes) = file.read_bytes().await {
-                                                let data_url = data_url_from_bytes(&mime, bytes.to_vec());
+                                                let bytes_vec = bytes.to_vec();
+                                                let data_url = avif_data_url_from_bytes(bytes_vec.clone())
+                                                    .unwrap_or_else(|| data_url_from_bytes(&mime, bytes_vec));
                                                 preview.set(data_url);
                                             }
                                         });
@@ -901,7 +907,9 @@ pub fn NewChatModal(
                                             let mut preview = group_avatar;
                                             spawn(async move {
                                                 if let Ok(bytes) = file.read_bytes().await {
-                                                    let data_url = data_url_from_bytes(&mime, bytes.to_vec());
+                                                    let bytes_vec = bytes.to_vec();
+                                                    let data_url = avif_data_url_from_bytes(bytes_vec.clone())
+                                                        .unwrap_or_else(|| data_url_from_bytes(&mime, bytes_vec));
                                                     preview.set(data_url);
                                                 }
                                             });
