@@ -48,6 +48,10 @@ pub fn ChatArea(
     on_send_other_message: EventHandler<(String, String)>,
     on_send_status: EventHandler<String>,
     on_send_image: EventHandler<String>,
+    on_send_sticker: EventHandler<String>,
+    on_send_sticker_other: EventHandler<(String, String)>,
+    stickers: ReadSignal<Vec<String>>,
+    on_add_sticker: EventHandler<String>,
     on_delete_message: EventHandler<String>,
     on_edit_message: EventHandler<(String, String)>,
     on_add_reaction: EventHandler<(String, String)>,
@@ -66,12 +70,15 @@ pub fn ChatArea(
     let mut header_menu_open = use_signal(|| false);
     let mut show_pick_sender = use_signal(|| false);
     let mut pick_sender_text = use_signal(|| "".to_string());
+    let mut pick_sender_sticker = use_signal(|| Option::<String>::None);
     let mut clear_input_token = use_signal(|| 0usize);
+    let mut sticker_menu_state = use_signal(|| Option::<(i32, i32)>::None);
 
     use_effect(move || {
         menu_close_token.read();
         context_menu.set(None);
         header_menu_open.set(false);
+        sticker_menu_state.set(None);
     });
 
     // 监听消息列表变化，自动滚动到底部
@@ -304,7 +311,7 @@ pub fn ChatArea(
             .map(|reaction| {
                 let (reaction_sender_name, _) = resolve_sender(&reaction.sender_id);
                 if reaction_sender_name.is_empty() {
-                    format!("{}", reaction.content)
+                    reaction.content.to_string()
                 } else {
                     format!("{} {}", reaction.content, reaction_sender_name)
                 }
@@ -359,6 +366,12 @@ pub fn ChatArea(
                     members: selectable_members.clone(),
                     on_close: move |_| show_pick_sender.set(false),
                     on_send: move |sender_id| {
+                        if let Some(sticker) = pick_sender_sticker() {
+                            on_send_sticker_other.call((sender_id, sticker));
+                            pick_sender_sticker.set(None);
+                            show_pick_sender.set(false);
+                            return;
+                        }
                         let text = pick_sender_text();
                         if !text.trim().is_empty() {
                             on_send_other_message.call((sender_id, text));
@@ -580,7 +593,7 @@ pub fn ChatArea(
                 div { class: "h-[2px] mx-3 mt-0 mb-1.5 bg-[rgb(71,71,71)] z-10" }
                 div {
                     class: "mx-[1.5px] mb-[1.5px] rounded-b-[10px] flex flex-col",
-                    style: "background-color: rgb(50, 50, 50);",
+                    style: if sticker_menu_state().is_some() { "background-color: black; border-radius: 8px;" } else { "background-color: rgb(50, 50, 50); border-radius: 0 0 10px 10px;" },
                     div { class: "p-4",
                         InputBar {
                             on_send: move |text| on_send_message.call(text),
@@ -596,7 +609,18 @@ pub fn ChatArea(
                             is_group: contact.is_group,
                             on_send_status: move |text| on_send_status.call(text),
                             on_send_image: move |data_url| on_send_image.call(data_url),
+                            on_send_sticker: move |(sticker_src, is_ctrl)| {
+                                if is_ctrl {
+                                    pick_sender_sticker.set(Some(sticker_src));
+                                    show_pick_sender.set(true);
+                                } else {
+                                    on_send_sticker.call(sticker_src);
+                                }
+                            },
+                            stickers,
+                            on_add_sticker,
                             menu_close_token,
+                            sticker_menu: sticker_menu_state,
                             clear_text_token: clear_input_token,
                         }
                     }
@@ -651,11 +675,12 @@ fn MessageBubble(
     };
     let image_bubble_style =
         "background: transparent; background-image: none; box-shadow: none; padding: 0;";
+    let is_sticker = matches!(message.kind, MessageKind::Sticker);
 
     let is_image = matches!(message.kind, MessageKind::Image);
     let base_bubble_class =
         "relative px-3 py-2 text-base font-medium shadow-sm break-words whitespace-pre-wrap leading-relaxed text-left";
-    let bubble_class = if is_image {
+    let bubble_class = if is_image && !is_sticker {
         "relative text-base font-medium leading-relaxed text-left"
     } else {
         base_bubble_class
@@ -814,10 +839,16 @@ fn MessageBubble(
                         div {
                             class: "{bubble_class} {bubble_radius_class} {text_color}",
                             style: if is_image { "{image_bubble_style}" } else { "{bubble_style}" },
-                            if is_image {
+                            if is_image && !is_sticker {
                                 img {
                                     src: "{message.content}",
                                     class: "max-w-[320px] object-contain rounded",
+                                }
+                            } else if is_sticker {
+                                img {
+                                    src: "{message.content}",
+                                    class: "max-w-[200px] object-contain",
+                                    style: "{text_anim_style}",
                                 }
                             } else {
                                 div { style: "{text_anim_style}", "{message.content}" }

@@ -28,6 +28,7 @@ pub enum MessageKind {
     Normal,
     Status,
     Image,
+    Sticker,
 }
 
 #[derive(Clone, PartialEq, Debug, Serialize)]
@@ -134,6 +135,8 @@ pub struct AppState {
     pub contacts: Vec<Contact>,
     pub messages: HashMap<String, Vec<Message>>,
     pub operators: Vec<Operator>,
+    #[serde(default)]
+    pub stickers: Vec<String>,
     #[serde(default)]
     pub background: BackgroundSettings,
     #[serde(default)]

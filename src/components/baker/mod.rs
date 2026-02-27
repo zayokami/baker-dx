@@ -6,7 +6,7 @@ pub mod models;
 pub mod sidebar;
 pub mod storage;
 
-pub use layout::BakerLayout;
+pub use layout::Route;
 
 pub(super) fn mime_from_filename(name: &str) -> &'static str {
     match name
