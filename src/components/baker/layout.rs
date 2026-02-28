@@ -493,7 +493,8 @@ pub fn BakerLayout() -> Element {
             if let Some(msgs) = state.messages.get_mut(&contact_id) {
                 if let Some(msg) = msgs.iter_mut().find(|m| m.id == msg_id) {
                     // 只删除当前用户的反应，保留其他人的
-                    msg.reactions.retain(|reaction| reaction.sender_id != user_id);
+                    msg.reactions
+                        .retain(|reaction| reaction.sender_id != user_id);
                 }
             }
         }
