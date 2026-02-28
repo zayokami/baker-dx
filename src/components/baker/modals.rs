@@ -565,6 +565,34 @@ pub fn ReactionModal(on_close: EventHandler<()>, on_save: EventHandler<String>) 
                         placeholder: "输入 reaction（例如 😀）",
                         value: "{reaction}",
                         oninput: move |e| reaction.set(e.value()),
+                        onkeydown: move |e| {
+                            if e.key() == Key::Enter {
+                                let val = reaction();
+                                if !val.trim().is_empty() {
+                                    on_save.call(val);
+                                }
+                            }
+                        },
+                    }
+                    // 常用表情快捷按钮
+                    div { class: "flex flex-wrap gap-2",
+                        for emoji in ["😀", "😂", "😭", "👍", "❤️", "❗", "❓"] {
+                            {
+                                let emoji_str = emoji.to_string();
+                                rsx! {
+                                    button {
+                                        class: "px-2 py-1 rounded bg-[#3a3a3a] hover:bg-[#4a4a4a] text-lg",
+                                        onclick: {
+                                            let emoji_val = emoji_str.clone();
+                                            move |_| {
+                                                on_save.call(emoji_val.clone());
+                                            }
+                                        },
+                                        "{emoji}"
+                                    }
+                                }
+                            }
+                        }
                     }
                     div { class: "flex justify-end gap-3",
                         button {

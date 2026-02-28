@@ -488,10 +488,12 @@ pub fn BakerLayout() -> Element {
 
     let delete_reaction = move |msg_id: String| {
         if let Some(contact_id) = selected_contact_id() {
+            let user_id = app_state.read().user_profile.id.clone();
             let mut state = app_state.write();
             if let Some(msgs) = state.messages.get_mut(&contact_id) {
                 if let Some(msg) = msgs.iter_mut().find(|m| m.id == msg_id) {
-                    msg.reactions.clear();
+                    // 只删除当前用户的反应，保留其他人的
+                    msg.reactions.retain(|reaction| reaction.sender_id != user_id);
                 }
             }
         }
