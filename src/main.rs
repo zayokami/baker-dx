@@ -12,6 +12,7 @@ mod components;
 const FAVICON: Asset = asset!("/assets/favicon.ico");
 // The asset macro also minifies some assets like CSS and JS to make bundled smaller
 const MAIN_CSS: Asset = asset!("/assets/styling/main.css");
+const MODAL_CSS: Asset = asset!("/assets/styling/modal.css");
 const TAILWIND_CSS: Asset = asset!("/assets/tailwind.css");
 
 fn main() {
@@ -56,6 +57,7 @@ fn App() -> Element {
         document::Link { rel: "icon", href: FAVICON }
         document::Link { rel: "stylesheet", href: MAIN_CSS }
         document::Link { rel: "stylesheet", href: TAILWIND_CSS }
+        document::Link { rel: "stylesheet", href: MODAL_CSS }
         document::Title { "Baker" }
 
         // The router component renders the route enum we defined above. It will handle synchronization of the URL and render

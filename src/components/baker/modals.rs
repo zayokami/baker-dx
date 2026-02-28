@@ -4,6 +4,69 @@ use crate::dioxus_elements::FileData;
 use dioxus::prelude::*;
 use uuid::Uuid;
 
+#[component]
+fn Modal(
+    title: &'static str,
+    content_confirmation_button: &'static str,
+    children: Element,
+    on_close: EventHandler,
+    on_confirm: EventHandler,
+) -> Element {
+    rsx! {
+        div {
+            class: "fixed inset-0 bg-black/50 flex items-center justify-center z-50 backdrop-blur-sm",
+            onmousedown: move |_| on_close.call(()),
+
+            div { class: "modal-mask w-screen",
+
+                div { class: "modal-reveal",
+
+                    div {
+                        class: "modal-panel bg-[#f0f0f0] shadow-2xl overflow-hidden border border-gray-600",
+                        style: "background-image: linear-gradient(rgba(0,0,0,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,0.06) 1px, transparent 1px); background-size: 6px 6px",
+                        onclick: |e| e.stop_propagation(),
+                        onmousedown: |e| e.stop_propagation(),
+
+                        div { class: "px-5 py-3 flex justify-between items-center bg-[#fdfc00] border-b border-black/10",
+                            h2 { class: "text-black text-base font-semibold tracking-wide",
+                                {title}
+                            }
+                            button {
+                                class: "w-7 h-7 rounded flex items-center justify-center text-black hover:bg-black/10 transition-colors",
+                                onclick: move |_| on_close.call(()),
+                                "✕"
+                            }
+                        }
+
+                        div { class: "w-full max-w-[340px] mx-auto",
+                            div { class: "p-4 space-y-4",
+
+                                {children}
+
+                                div { class: "flex justify-end gap-3",
+                                    button {
+                                        class: "px-4 py-2 text-black hover:text-gray-400 text-sm",
+                                        onclick: move |_| on_close.call(()),
+                                        "取消"
+                                    }
+                                    button {
+                                        class: "px-4 py-2 bg-[#fdfc00] hover:bg-[#fdfc00]/60 text-black rounded text-sm font-medium",
+                                        onclick: move |_| {
+                                            on_confirm.call(());
+                                            on_close.call(());
+                                        },
+                                        {content_confirmation_button}
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 #[derive(Clone, PartialEq)]
 pub enum ReplayIntervalMode {
     Fixed,
@@ -29,34 +92,36 @@ pub fn ReplaySettingsModal(
     let mut gap_ms = use_signal(|| "200".to_string());
 
     let fixed_class = if matches!(mode(), ReplayIntervalMode::Fixed) {
-        "bg-blue-600 text-white"
+        "bg-[#fdfc00] text-black"
     } else {
-        "bg-[#3a3a3a] text-gray-300"
+        "bg-[#fdfc00]/0 text-black"
     };
     let per_char_class = if matches!(mode(), ReplayIntervalMode::PerChar) {
-        "bg-blue-600 text-white"
+        "bg-[#fdfc00] text-black"
     } else {
-        "bg-[#3a3a3a] text-gray-300"
+        "bg-[#fdfc00]/0 text-black"
     };
 
     rsx! {
-        div {
-            class: "fixed inset-0 bg-black/50 flex items-center justify-center z-50 backdrop-blur-sm",
-            onclick: move |_| on_close.call(()),
-            div {
-                class: "bg-[#2b2b2b] w-[420px] rounded-xl shadow-2xl overflow-hidden border border-gray-600",
-                onclick: |e| e.stop_propagation(),
+        Modal {
+            title: "回放设置",
+            content_confirmation_button: "开始回放",
+            on_confirm: move |_| {
+                let fixed = fixed_ms().parse::<u64>().unwrap_or(800);
+                let per_char = per_char_ms().parse::<u64>().unwrap_or(40);
+                let gap = gap_ms().parse::<u64>().unwrap_or(200);
+                on_start
+                    .call(ReplaySettings {
+                        mode: mode(),
+                        fixed_ms: fixed,
+                        per_char_ms: per_char,
+                        gap_ms: gap,
+                    });
+            },
+            on_close,
 
-                div { class: "px-6 py-4 border-b border-gray-600 flex justify-between items-center bg-[#333]",
-                    h2 { class: "text-white text-lg font-bold", "回放设置" }
-                    button {
-                        class: "text-gray-400 hover:text-white transition-colors",
-                        onclick: move |_| on_close.call(()),
-                        "✕"
-                    }
-                }
-
-                div { class: "p-4 space-y-4",
+            {
+                rsx! {
                     div { class: "flex gap-2",
                         button {
                             class: "flex-1 px-3 py-2 rounded text-sm font-medium transition-colors {fixed_class}",
@@ -69,7 +134,6 @@ pub fn ReplaySettingsModal(
                             "按字数"
                         }
                     }
-
                     div { class: "space-y-3",
                         div { class: "space-y-1",
                             label { class: "block text-gray-400 text-sm", "固定间隔 (ms)" }
@@ -100,31 +164,6 @@ pub fn ReplaySettingsModal(
                                 value: "{gap_ms}",
                                 oninput: move |e| gap_ms.set(e.value()),
                             }
-                        }
-                    }
-
-                    div { class: "flex justify-end gap-3",
-                        button {
-                            class: "px-4 py-2 text-gray-400 hover:text-white text-sm",
-                            onclick: move |_| on_close.call(()),
-                            "取消"
-                        }
-                        button {
-                            class: "px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded text-sm font-medium",
-                            onclick: move |_| {
-                                let fixed = fixed_ms().parse::<u64>().unwrap_or(800);
-                                let per_char = per_char_ms().parse::<u64>().unwrap_or(40);
-                                let gap = gap_ms().parse::<u64>().unwrap_or(200);
-                                on_start
-                                    .call(ReplaySettings {
-                                        mode: mode(),
-                                        fixed_ms: fixed,
-                                        per_char_ms: per_char,
-                                        gap_ms: gap,
-                                    });
-                                on_close.call(());
-                            },
-                            "开始回放"
                         }
                     }
                 }
@@ -507,10 +546,11 @@ pub fn ReactionModal(on_close: EventHandler<()>, on_save: EventHandler<String>) 
     rsx! {
         div {
             class: "fixed inset-0 bg-black/50 flex items-center justify-center z-50 backdrop-blur-sm",
-            onclick: move |_| on_close.call(()),
+            onmousedown: move |_| on_close.call(()),
             div {
                 class: "bg-[#2b2b2b] w-[360px] rounded-xl shadow-2xl overflow-hidden border border-gray-600",
                 onclick: |e| e.stop_propagation(),
+                onmousedown: |e| e.stop_propagation(),
                 div { class: "px-6 py-4 border-b border-gray-600 flex justify-between items-center bg-[#333]",
                     h2 { class: "text-white text-lg font-bold", "添加反应" }
                     button {
