@@ -134,7 +134,6 @@
   }
   img, svg, video, canvas, audio, iframe, embed, object {
     display: block;
-    vertical-align: middle;
   }
   img, video {
     max-width: 100%;
@@ -1095,6 +1094,13 @@
     &:hover {
       @media (hover: hover) {
         background-color: #3a3a3a;
+      }
+    }
+  }
+  .hover\:bg-\[\#4a4a4a\] {
+    &:hover {
+      @media (hover: hover) {
+        background-color: #4a4a4a;
       }
     }
   }
