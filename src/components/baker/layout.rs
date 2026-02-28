@@ -1,13 +1,13 @@
 use crate::components::baker::chat_area::{ChatArea, PendingTyping, ReplayTypingPhase};
 use crate::components::baker::modals::{
     NewChatModal, NewChatSelection, ProfileModal, ReplayIntervalMode, ReplaySettings,
-    ReplaySettingsModal, SettingsModal, TutorialModal, UpdateAvailableModal,
+    ReplaySettingsModal, TutorialModal, UpdateAvailableModal,
 };
 use crate::components::baker::models::{
     BackgroundMode, ChatHeadStyle, Contact, Message, MessageKind, MessageReaction,
 };
+use crate::components::baker::settings::SettingsPage;
 use crate::components::baker::sidebar::Sidebar;
-use crate::components::baker::storage::{load_state, save_state};
 use chrono::Utc;
 use dioxus::prelude::*;
 #[cfg(target_arch = "wasm32")]
@@ -48,9 +48,9 @@ struct UpdateInfo {
 }
 
 #[derive(Deserialize)]
-struct RepoConfig {
-    owner: String,
-    repo: String,
+pub(super) struct RepoConfig {
+    pub(super) owner: String,
+    pub(super) repo: String,
 }
 
 #[derive(Deserialize)]
@@ -101,6 +101,32 @@ fn schedule_animate_off_in_list(mut list: Signal<Vec<Message>>, msg_id: String) 
     });
 }
 
+fn schedule_reaction_animate_off_in_state(
+    mut app_state: Signal<crate::components::baker::models::AppState>,
+    contact_id: String,
+    msg_id: String,
+) {
+    spawn(async move {
+        sleep_ms(220).await;
+        if let Some(msgs) = app_state.write().messages.get_mut(&contact_id) {
+            if let Some(msg) = msgs.iter_mut().find(|m| m.id == msg_id) {
+                msg.animate_reactions = false;
+            }
+        }
+    });
+}
+
+fn schedule_reaction_animate_off_in_list(mut list: Signal<Vec<Message>>, msg_id: String) {
+    spawn(async move {
+        sleep_ms(220).await;
+        list.with_mut(|msgs| {
+            if let Some(msg) = msgs.iter_mut().find(|m| m.id == msg_id) {
+                msg.animate_reactions = false;
+            }
+        });
+    });
+}
+
 fn parse_version(input: &str) -> Option<Vec<u64>> {
     let trimmed = input.trim();
     let without_prefix = trimmed.strip_prefix('v').unwrap_or(trimmed);
@@ -140,7 +166,7 @@ fn is_remote_newer(local: &str, remote: &str) -> bool {
     false
 }
 
-fn load_repo_config() -> Option<RepoConfig> {
+pub(super) fn load_repo_config() -> Option<RepoConfig> {
     let raw = include_str!("../../../github-list-releases-parameters.json");
     serde_json::from_str(raw).ok()
 }
@@ -180,15 +206,8 @@ async fn open_url(url: String) {
 
 #[component]
 pub fn BakerLayout() -> Element {
-    // Load initial state
-    let mut app_state = use_signal(load_state);
+    let mut app_state = use_context::<Signal<crate::components::baker::models::AppState>>();
 
-    // Persist state on change
-    use_effect(move || {
-        save_state(&app_state.read());
-    });
-
-    let mut show_settings = use_signal(|| false);
     let mut show_new_chat = use_signal(|| false);
     let mut show_profile = use_signal(|| false);
     let mut show_tutorial = use_signal(|| false);
@@ -202,6 +221,8 @@ pub fn BakerLayout() -> Element {
     let mut replay_pending = use_signal(|| Option::<PendingTyping>::None);
     let mut update_info = use_signal(|| Option::<UpdateInfo>::None);
     let mut update_checked = use_signal(|| false);
+
+    let navigator = use_navigator();
 
     use_effect(move || {
         if update_checked() {
@@ -243,7 +264,7 @@ pub fn BakerLayout() -> Element {
             let messages = state
                 .messages
                 .entry(current_contact_id.clone())
-                .or_insert(Vec::new());
+                .or_default();
             let new_id = Uuid::new_v4().to_string();
 
             messages.push(Message {
@@ -252,6 +273,7 @@ pub fn BakerLayout() -> Element {
                 content,
                 kind,
                 animate: true,
+                animate_reactions: false,
                 reactions: Vec::new(),
             });
             new_id
@@ -279,6 +301,25 @@ pub fn BakerLayout() -> Element {
         add_message(user_id, data_url, MessageKind::Image);
     };
 
+    let handle_send_sticker = move |sticker_src: String| {
+        let user_id = app_state.read().user_profile.id.clone();
+        add_message(user_id, sticker_src, MessageKind::Sticker);
+    };
+
+    let mut handle_send_sticker_other = move |sender_id: String, sticker_src: String| {
+        add_message(sender_id, sticker_src, MessageKind::Sticker);
+    };
+    let handle_add_sticker = move |sticker_src: String| {
+        let trimmed = sticker_src.trim();
+        if trimmed.is_empty() {
+            return;
+        }
+        let mut state = app_state.write();
+        if !state.stickers.iter().any(|s| s == trimmed) {
+            state.stickers.push(trimmed.to_string());
+        }
+    };
+
     let selected_contact = {
         let selected_id = selected_contact_id();
         app_state
@@ -297,6 +338,7 @@ pub fn BakerLayout() -> Element {
 
     // Derived signals for Sidebar
     let contacts = use_memo(move || app_state.read().contacts.clone());
+    let stickers = use_memo(move || app_state.read().stickers.clone());
 
     // Derived signals for ChatArea
     let messages = use_memo(move || {
@@ -423,14 +465,23 @@ pub fn BakerLayout() -> Element {
         }
         let sender_id = app_state.read().user_profile.id.clone();
         if let Some(contact_id) = selected_contact_id() {
-            let mut state = app_state.write();
-            if let Some(msgs) = state.messages.get_mut(&contact_id) {
-                if let Some(msg) = msgs.iter_mut().find(|m| m.id == msg_id) {
-                    msg.reactions.push(MessageReaction {
-                        content: reaction,
-                        sender_id,
-                    });
+            let mut should_animate = false;
+            let msg_id_value = msg_id.clone();
+            {
+                let mut state = app_state.write();
+                if let Some(msgs) = state.messages.get_mut(&contact_id) {
+                    if let Some(msg) = msgs.iter_mut().find(|m| m.id == msg_id) {
+                        msg.reactions.push(MessageReaction {
+                            content: reaction,
+                            sender_id,
+                        });
+                        msg.animate_reactions = true;
+                        should_animate = true;
+                    }
                 }
+            }
+            if should_animate {
+                schedule_reaction_animate_off_in_state(app_state, contact_id, msg_id_value);
             }
         }
     };
@@ -448,43 +499,42 @@ pub fn BakerLayout() -> Element {
         }
     };
 
-    let insert_message = move |(before_id, content, sender_id_opt): (String, String, Option<String>)| {
-        if let Some(contact_id) = selected_contact_id() {
-            let sender_id = match sender_id_opt {
-                // 我方
-                None => app_state.read().user_profile.id.clone(),
-                // 指定发送者（单聊对方或群组选定成员）
-                Some(id) => id,
-            };
-            let new_id = {
-                let mut state = app_state.write();
-                let messages = state
-                    .messages
-                    .entry(contact_id.clone())
-                    .or_insert(Vec::new());
-                let new_id = Uuid::new_v4().to_string();
-                let insert_index = messages
-                    .iter()
-                    .position(|m| m.id == before_id)
-                    .unwrap_or(messages.len());
+    let insert_message =
+        move |(before_id, content, sender_id_opt): (String, String, Option<String>)| {
+            if let Some(contact_id) = selected_contact_id() {
+                let sender_id = match sender_id_opt {
+                    // 我方
+                    None => app_state.read().user_profile.id.clone(),
+                    // 指定发送者（单聊对方或群组选定成员）
+                    Some(id) => id,
+                };
+                let new_id = {
+                    let mut state = app_state.write();
+                    let messages = state.messages.entry(contact_id.clone()).or_default();
+                    let new_id = Uuid::new_v4().to_string();
+                    let insert_index = messages
+                        .iter()
+                        .position(|m| m.id == before_id)
+                        .unwrap_or(messages.len());
 
-                messages.insert(
-                    insert_index,
-                    Message {
-                        id: new_id.clone(),
-                        sender_id,
-                        content,
-                        kind: MessageKind::Normal,
-                        animate: true,
-                        reactions: Vec::new(),
-                    },
-                );
-                new_id
-            };
+                    messages.insert(
+                        insert_index,
+                        Message {
+                            id: new_id.clone(),
+                            sender_id,
+                            content,
+                            kind: MessageKind::Normal,
+                            animate: true,
+                            animate_reactions: false,
+                            reactions: Vec::new(),
+                        },
+                    );
+                    new_id
+                };
 
-            schedule_animate_off_in_state(app_state, contact_id, new_id);
-        }
-    };
+                schedule_animate_off_in_state(app_state, contact_id, new_id);
+            }
+        };
 
     let update_chat_head_style = move |style: ChatHeadStyle| {
         if let Some(contact_id) = selected_contact_id() {
@@ -602,6 +652,7 @@ pub fn BakerLayout() -> Element {
                         replay_messages_async.with_mut(|list| {
                             list.push(Message {
                                 animate: true,
+                                animate_reactions: false,
                                 ..msg.clone()
                             });
                         });
@@ -628,6 +679,7 @@ pub fn BakerLayout() -> Element {
                         replay_messages_async.with_mut(|list| {
                             list.push(Message {
                                 animate: true,
+                                animate_reactions: false,
                                 reactions: Vec::new(),
                                 ..msg.clone()
                             });
@@ -656,8 +708,10 @@ pub fn BakerLayout() -> Element {
                             replay_messages_async.with_mut(|list| {
                                 if let Some(item) = list.iter_mut().find(|m| m.id == msg_id) {
                                     item.reactions = reactions;
+                                    item.animate_reactions = true;
                                 }
                             });
+                            schedule_reaction_animate_off_in_list(replay_messages_async, msg_id);
                         }
                     } else {
                         replay_pending_async.set(None);
@@ -667,6 +721,7 @@ pub fn BakerLayout() -> Element {
                         replay_messages_async.with_mut(|list| {
                             list.push(Message {
                                 animate: true,
+                                animate_reactions: false,
                                 reactions: Vec::new(),
                                 ..msg.clone()
                             });
@@ -682,8 +737,10 @@ pub fn BakerLayout() -> Element {
                             replay_messages_async.with_mut(|list| {
                                 if let Some(item) = list.iter_mut().find(|m| m.id == msg_id) {
                                     item.reactions = reactions;
+                                    item.animate_reactions = true;
                                 }
                             });
+                            schedule_reaction_animate_off_in_list(replay_messages_async, msg_id);
                         }
                     }
                 }
@@ -731,14 +788,6 @@ pub fn BakerLayout() -> Element {
             onclick: move |_| menu_close_token.set(menu_close_token() + 1),
 
             // Modals
-            if show_settings() {
-                SettingsModal {
-                    operators,
-                    background,
-                    on_close: move |_| show_settings.set(false),
-                }
-            }
-
             if show_new_chat() {
                 NewChatModal {
                     operators,
@@ -802,7 +851,9 @@ pub fn BakerLayout() -> Element {
                 div { class: "flex items-center gap-4",
                     span {
                         class: "text-white text-base font-bold cursor-pointer select-none hover:text-gray-300 transition-colors",
-                        ondoubleclick: move |_| show_settings.set(true),
+                        ondoubleclick: move |_| {
+                            navigator.push(Route::SettingsPage {});
+                        },
                         "//BAKER/好友沟通"
                     }
                     if !hide_tutorial {
@@ -882,6 +933,12 @@ pub fn BakerLayout() -> Element {
                                 },
                                 on_send_status: handle_send_status,
                                 on_send_image: handle_send_image,
+                                on_send_sticker: handle_send_sticker,
+                                on_send_sticker_other: move |(sender_id, sticker)| {
+                                    handle_send_sticker_other(sender_id, sticker);
+                                },
+                                stickers,
+                                on_add_sticker: handle_add_sticker,
                                 on_delete_message: delete_message,
                                 on_edit_message: edit_message,
                                 on_add_reaction: add_reaction,
@@ -902,4 +959,13 @@ pub fn BakerLayout() -> Element {
             }
         }
     }
+}
+
+#[derive(Debug, Clone, Routable, PartialEq)]
+#[rustfmt::skip]
+pub enum Route {
+    #[route("/")]
+    BakerLayout {},
+    #[route("/settings")]
+    SettingsPage {},
 }

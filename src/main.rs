@@ -2,16 +2,10 @@
 // need dioxus
 use dioxus::prelude::*;
 
-use components::baker::BakerLayout;
+use components::baker::storage::{load_state, save_state};
+use components::baker::Route;
 
 mod components;
-
-#[derive(Debug, Clone, Routable, PartialEq)]
-#[rustfmt::skip]
-enum Route {
-    #[route("/")]
-    BakerLayout {},
-}
 
 // We can import assets in dioxus with the `asset!` macro. This macro takes a path to an asset relative to the crate root.
 // The macro returns an `Asset` type that will display as the path to the asset in the browser or a local path in desktop bundles.
@@ -49,6 +43,12 @@ fn load_window_icon() -> dioxus::desktop::tao::window::Icon {
 /// Components should be annotated with `#[component]` to support props, better error messages, and autocomplete
 #[component]
 fn App() -> Element {
+    let app_state = use_signal(load_state);
+    use_context_provider(|| app_state);
+    use_effect(move || {
+        save_state(&app_state.read());
+    });
+
     // The `rsx!` macro lets us define HTML inside of rust. It expands to an Element with all of our HTML inside.
     rsx! {
         // In addition to element and text (which we will see later), rsx can contain other components. In this case,

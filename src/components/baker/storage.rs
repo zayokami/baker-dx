@@ -134,6 +134,7 @@ fn migrate_legacy_state(legacy: LegacyAppState) -> AppState {
                     content,
                     kind: MessageKind::Normal,
                     animate,
+                    animate_reactions: false,
                     reactions: Vec::new(),
                 }
             })
@@ -150,6 +151,7 @@ fn migrate_legacy_state(legacy: LegacyAppState) -> AppState {
         contacts,
         messages,
         operators,
+        stickers: Vec::new(),
         background: legacy.background,
         update_snooze_date: None,
         hide_tutorial: false,

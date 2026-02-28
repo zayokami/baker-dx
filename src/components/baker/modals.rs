@@ -1,5 +1,5 @@
 use crate::components::baker::models::{BackgroundMode, BackgroundSettings, Operator};
-use crate::components::baker::{data_url_from_bytes, mime_from_filename};
+use crate::components::baker::{avif_data_url_from_bytes, data_url_from_bytes, mime_from_filename};
 use crate::dioxus_elements::FileData;
 use dioxus::prelude::*;
 use uuid::Uuid;
@@ -226,7 +226,9 @@ pub fn SettingsModal(
                                         let mut preview = new_avatar_preview;
                                         spawn(async move {
                                             if let Ok(bytes) = file.read_bytes().await {
-                                                let data_url = data_url_from_bytes(&mime, bytes.to_vec());
+                                                let bytes_vec = bytes.to_vec();
+                                                let data_url = avif_data_url_from_bytes(bytes_vec.clone())
+                                                    .unwrap_or_else(|| data_url_from_bytes(&mime, bytes_vec));
                                                 preview.set(data_url);
                                             }
                                         });
@@ -330,7 +332,9 @@ pub fn SettingsModal(
                                             let mut bg = background;
                                             spawn(async move {
                                                 if let Ok(bytes) = file.read_bytes().await {
-                                                    let data_url = data_url_from_bytes(&mime, bytes.to_vec());
+                                                    let bytes_vec = bytes.to_vec();
+                                                    let data_url = avif_data_url_from_bytes(bytes_vec.clone())
+                                                        .unwrap_or_else(|| data_url_from_bytes(&mime, bytes_vec));
                                                     let mut settings = bg.write();
                                                     settings.custom_image = data_url;
                                                     settings.mode = BackgroundMode::CustomImage;
@@ -401,7 +405,9 @@ pub fn ProfileModal(
                                         let mut preview = avatar_preview;
                                         spawn(async move {
                                             if let Ok(bytes) = file.read_bytes().await {
-                                                let data_url = data_url_from_bytes(&mime, bytes.to_vec());
+                                                let bytes_vec = bytes.to_vec();
+                                                let data_url = avif_data_url_from_bytes(bytes_vec.clone())
+                                                    .unwrap_or_else(|| data_url_from_bytes(&mime, bytes_vec));
                                                 preview.set(data_url);
                                             }
                                         });
@@ -645,9 +651,7 @@ pub fn PickSenderModal(
                 }
                 div { class: "p-4 max-h-[50vh] overflow-y-auto custom-scrollbar",
                     if members.is_empty() {
-                        div { class: "text-center text-gray-500 py-6",
-                            "暂无可选成员"
-                        }
+                        div { class: "text-center text-gray-500 py-6", "暂无可选成员" }
                     } else {
                         div { class: "grid grid-cols-1 gap-2",
                             for member in members {
@@ -661,19 +665,12 @@ pub fn PickSenderModal(
                                             onclick: move |_| on_send.call(member_id.clone()),
                                             div { class: "w-10 h-10 rounded bg-gray-600 flex items-center justify-center overflow-hidden border border-gray-500 group-hover:border-blue-500",
                                                 if !member_avatar.is_empty() {
-                                                    img {
-                                                        src: "{member_avatar}",
-                                                        class: "w-full h-full object-cover",
-                                                    }
+                                                    img { src: "{member_avatar}", class: "w-full h-full object-cover" }
                                                 } else {
-                                                    span { class: "text-white font-bold",
-                                                        "{member_name.chars().next().unwrap_or('?')}"
-                                                    }
+                                                    span { class: "text-white font-bold", "{member_name.chars().next().unwrap_or('?')}" }
                                                 }
                                             }
-                                            span { class: "text-white font-medium group-hover:text-blue-400",
-                                                "{member_name}"
-                                            }
+                                            span { class: "text-white font-medium group-hover:text-blue-400", "{member_name}" }
                                         }
                                     }
                                 }
@@ -852,13 +849,14 @@ pub fn NewChatModal(
                                             class: "flex items-center gap-3 p-3 rounded hover:bg-[#3a3a3a] transition-colors text-left group",
                                             onclick: move |_| {
                                                 error_text.set("".to_string());
-                                                selected_ids.with_mut(|list| {
-                                                    if let Some(pos) = list.iter().position(|id| id == &op_id_for_click) {
-                                                        list.remove(pos);
-                                                    } else {
-                                                        list.push(op_id_for_click.clone());
-                                                    }
-                                                });
+                                                selected_ids
+                                                    .with_mut(|list| {
+                                                        if let Some(pos) = list.iter().position(|id| id == &op_id_for_click) {
+                                                            list.remove(pos);
+                                                        } else {
+                                                            list.push(op_id_for_click.clone());
+                                                        }
+                                                    });
                                             },
                                             input {
                                                 r#type: "checkbox",
@@ -867,19 +865,12 @@ pub fn NewChatModal(
                                             }
                                             div { class: "w-10 h-10 rounded bg-gray-600 flex items-center justify-center overflow-hidden border border-gray-500 group-hover:border-blue-500",
                                                 if !op_avatar.is_empty() {
-                                                    img {
-                                                        src: "{op_avatar}",
-                                                        class: "w-full h-full object-cover",
-                                                    }
+                                                    img { src: "{op_avatar}", class: "w-full h-full object-cover" }
                                                 } else {
-                                                    span { class: "text-white font-bold",
-                                                        "{op_name.chars().next().unwrap_or('?')}"
-                                                    }
+                                                    span { class: "text-white font-bold", "{op_name.chars().next().unwrap_or('?')}" }
                                                 }
                                             }
-                                            span { class: "text-white font-medium group-hover:text-blue-400",
-                                                "{op_name}"
-                                            }
+                                            span { class: "text-white font-medium group-hover:text-blue-400", "{op_name}" }
                                         }
                                     }
                                 }
@@ -929,7 +920,9 @@ pub fn NewChatModal(
                                             let mut preview = group_avatar;
                                             spawn(async move {
                                                 if let Ok(bytes) = file.read_bytes().await {
-                                                    let data_url = data_url_from_bytes(&mime, bytes.to_vec());
+                                                    let bytes_vec = bytes.to_vec();
+                                                    let data_url = avif_data_url_from_bytes(bytes_vec.clone())
+                                                        .unwrap_or_else(|| data_url_from_bytes(&mime, bytes_vec));
                                                     preview.set(data_url);
                                                 }
                                             });
@@ -939,7 +932,10 @@ pub fn NewChatModal(
                                 if !group_avatar().is_empty() {
                                     div { class: "flex justify-center",
                                         div { class: "w-14 h-14 rounded bg-gray-600 flex items-center justify-center overflow-hidden border border-gray-500",
-                                            img { src: "{group_avatar}", class: "w-full h-full object-cover" }
+                                            img {
+                                                src: "{group_avatar}",
+                                                class: "w-full h-full object-cover",
+                                            }
                                         }
                                     }
                                 }
@@ -955,11 +951,12 @@ pub fn NewChatModal(
                                                 error_text.set("请输入群组名称".to_string());
                                                 return;
                                             }
-                                            on_select.call(NewChatSelection::Group {
-                                                name,
-                                                avatar_url: group_avatar(),
-                                                member_ids: selected_ids(),
-                                            });
+                                            on_select
+                                                .call(NewChatSelection::Group {
+                                                    name,
+                                                    avatar_url: group_avatar(),
+                                                    member_ids: selected_ids(),
+                                                });
                                         },
                                         "新建群组会话"
                                     }
@@ -973,39 +970,15 @@ pub fn NewChatModal(
     }
 }
 
+const IMAGE_TUTORIAL_1: Asset = asset!("/tutorial/1.png");
+const IMAGE_TUTORIAL_2: Asset = asset!("/tutorial/2.png");
+const IMAGE_TUTORIAL_3: Asset = asset!("/tutorial/3.png");
+const IMAGE_TUTORIAL_4: Asset = asset!("/tutorial/4.png");
+const IMAGE_TUTORIAL_5: Asset = asset!("/tutorial/5.png");
+
 #[component]
 pub fn TutorialModal(on_close: EventHandler<()>, on_confirm: EventHandler<bool>) -> Element {
     let mut dont_show_again = use_signal(|| false);
-    let tutorial_html = use_memo(|| {
-        let mut html = include_str!("../../../tutorial.html").to_string();
-        let img1 = data_url_from_bytes(
-            "image/png",
-            include_bytes!("../../../tutorial/1.png").to_vec(),
-        );
-        let img2 = data_url_from_bytes(
-            "image/png",
-            include_bytes!("../../../tutorial/2.png").to_vec(),
-        );
-        let img3 = data_url_from_bytes(
-            "image/png",
-            include_bytes!("../../../tutorial/3.png").to_vec(),
-        );
-        let img4 = data_url_from_bytes(
-            "image/png",
-            include_bytes!("../../../tutorial/4.png").to_vec(),
-        );
-        let img5 = data_url_from_bytes(
-            "image/png",
-            include_bytes!("../../../tutorial/5.png").to_vec(),
-        );
-        html = html.replace("./tutorial/1.png", &img1);
-        html = html.replace("./tutorial/2.png", &img2);
-        html = html.replace("./tutorial/3.png", &img3);
-        html = html.replace("./tutorial/4.png", &img4);
-        html = html.replace("./tutorial/5.png", &img5);
-        html
-    });
-    let tutorial_html = tutorial_html();
 
     rsx! {
         div {
@@ -1023,7 +996,76 @@ pub fn TutorialModal(on_close: EventHandler<()>, on_confirm: EventHandler<bool>)
                     }
                 }
                 div { class: "p-6 max-h-[60vh] overflow-y-auto custom-scrollbar text-gray-200 text-sm leading-relaxed space-y-3",
-                    dangerous_inner_html: "{tutorial_html}"
+                    h1 { class: "text-3xl font-bold", "对于 baker-dx 的简略教程" }
+                    h2 { class: "text-2xl font-bold", "1. 添加干员" }
+                    p {
+                        img { alt: "添加干员", src: IMAGE_TUTORIAL_1 }
+                    }
+                    p {
+                        img { alt: "添加干员", src: IMAGE_TUTORIAL_2 }
+                    }
+                    p { "左键双击左上角的 //BAKER/好友沟通，打开设置界面。" }
+                    p { "第一个输入框是干员名称，第二个是干员头像。" }
+                    p {
+                        "幸好应用目录 avatar/ 下有 Perlica 的头像，我们可以直接用这个。"
+                    }
+                    p { "两个空填完之后点击添加干员即可，然后关闭设置界面。" }
+                    h2 { class: "text-2xl font-bold mt-10", "2. 会话" }
+                    p {
+                        img { alt: "会话", src: IMAGE_TUTORIAL_3 }
+                    }
+                    p { "先点击左下角添加新会话，单选 Perlica 创建新会话。" }
+                    p { "点击 Perlica 的名片就可以切换到她的会话了。" }
+                    ul { style: "list-style: circle inside",
+                        li {
+                            "1 处按钮可以更改会话头部的样式，点击后会弹出一个菜单，你可以选择 2 个不同的样式。"
+                        }
+                        li {
+                            "右键输入框右侧的菜单按钮，可以选择："
+                            ul {
+                                class: "ml-10",
+                                style: "list-style: square inside",
+                                li {
+                                    "为对方发送：将输入框中的内容以对方的身份发送。"
+                                }
+                                li {
+                                    "发送为状态：将输入框中的内容以状态行的形式发送。"
+                                    ul {
+                                        class: "ml-10",
+                                        style: "list-style: inside",
+                                        li {
+                                            "状态行：状态行是一种特殊的消息，它会在会话中以独立的行展示，通常用于展示时间等其他重要信息。"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    h2 { class: "text-2xl font-bold mt-10", "3. 回放" }
+                    p {
+                        img { alt: "完整的聊天", src: IMAGE_TUTORIAL_4 }
+                        img { alt: "回放界面", src: IMAGE_TUTORIAL_5 }
+                    }
+                    p { "现在我们写好一段对话了。" }
+                    p { "右键一个消息，即可开始回放。" }
+                    p { "回放间隔计算有两种模式：" }
+                    ul {
+                        li { "固定间隔" }
+                        li { "按字数：根据消息的字数计算间隔" }
+                    }
+                    p {
+                        "那么两条消息发送的间隔就为：发送后间隔（第三个） + 输入间隔（就是那个输入动画的间隔）（前两个）"
+                    }
+                    p {
+                        "推荐设置为：\r\n    固定间隔 400ms + 发送后间隔 1000ms，这样子可能大差不差。\r\n    点击开始回放就好了。"
+                    }
+                    p {
+                        "（回放完之后发送消息（或者历史消息）看不到？切换其他的会话再回来就行了。）"
+                    }
+                    hr {}
+                    p {
+                        em { "如果你觉得这个软件有用，不妨分享一下？！" }
+                    }
                 }
                 div { class: "px-6 pb-6 pt-4 border-t border-gray-600 flex items-center justify-between",
                     label { class: "flex items-center gap-2 text-gray-300 text-sm cursor-pointer select-none",

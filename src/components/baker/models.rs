@@ -28,6 +28,7 @@ pub enum MessageKind {
     Normal,
     Status,
     Image,
+    Sticker,
 }
 
 #[derive(Clone, PartialEq, Debug, Serialize)]
@@ -67,6 +68,8 @@ pub struct Message {
     pub kind: MessageKind,
     #[serde(skip)]
     pub animate: bool,
+    #[serde(skip)]
+    pub animate_reactions: bool,
     #[serde(default)]
     pub reactions: Vec<MessageReaction>,
 }
@@ -134,6 +137,8 @@ pub struct AppState {
     pub contacts: Vec<Contact>,
     pub messages: HashMap<String, Vec<Message>>,
     pub operators: Vec<Operator>,
+    #[serde(default)]
+    pub stickers: Vec<String>,
     #[serde(default)]
     pub background: BackgroundSettings,
     #[serde(default)]

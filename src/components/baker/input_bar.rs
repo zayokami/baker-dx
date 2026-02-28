@@ -1,4 +1,4 @@
-use crate::components::baker::{data_url_from_bytes, mime_from_filename};
+use crate::components::baker::{avif_data_url_from_bytes, data_url_from_bytes, mime_from_filename};
 use crate::dioxus_elements::FileData;
 use dioxus::prelude::*;
 
@@ -11,6 +11,7 @@ fn menu_style(x: i32, y: i32, width: i32, height: i32) -> String {
 const CHAT_ENTER: Asset = asset!("/assets/images/chat_enter.png");
 const CHAT_EMOJI: Asset = asset!("/assets/images/chat_emoji.png");
 const CHAT_PLUS: Asset = asset!("/assets/images/chat_plus.png");
+const STICKER_WRITEDOWN: Asset = asset!("/assets/sticker/writedown.png");
 
 #[component]
 pub fn InputBar(
@@ -19,13 +20,18 @@ pub fn InputBar(
     is_group: bool,
     on_send_status: EventHandler<String>,
     on_send_image: EventHandler<String>,
+    on_send_sticker: EventHandler<(String, bool)>,
+    stickers: ReadSignal<Vec<String>>,
+    on_add_sticker: EventHandler<String>,
     menu_close_token: ReadSignal<usize>,
+    sticker_menu: Signal<Option<(i32, i32)>>,
     clear_text_token: ReadSignal<usize>,
 ) -> Element {
     let mut text = use_signal(String::new);
     let mut send_menu = use_signal(|| Option::<(i32, i32)>::None);
     let mut plus_menu = use_signal(|| Option::<(i32, i32)>::None);
     let mut image_input_token = use_signal(|| 0usize);
+    let mut sticker_input_token = use_signal(|| 0usize);
 
     let mut handle_submit = move || {
         let val = text.read().clone();
@@ -52,6 +58,7 @@ pub fn InputBar(
         menu_close_token.read();
         send_menu.set(None);
         plus_menu.set(None);
+        sticker_menu.set(None);
     });
     use_effect(move || {
         clear_text_token.read();
@@ -64,6 +71,7 @@ pub fn InputBar(
             onclick: move |_| {
                 send_menu.set(None);
                 plus_menu.set(None);
+                sticker_menu.set(None);
             },
 
             if let Some((x, y)) = send_menu() {
@@ -99,8 +107,7 @@ pub fn InputBar(
                     class: "fixed z-[100] bg-[#2b2b2b] border border-gray-600 rounded shadow-xl py-1 w-36",
                     style: "{menu_style(x, y, 144, 56)}",
                     onclick: |e| e.stop_propagation(),
-                    div {
-                        class: "px-4 py-2 hover:bg-[#3a3a3a] cursor-pointer text-white text-sm transition-colors relative overflow-hidden",
+                    div { class: "px-4 py-2 hover:bg-[#3a3a3a] cursor-pointer text-white text-sm transition-colors relative overflow-hidden",
                         "发送图片……"
                         input {
                             key: "{image_input_token()}",
@@ -118,7 +125,9 @@ pub fn InputBar(
                                     let send_image = on_send_image;
                                     spawn(async move {
                                         if let Ok(bytes) = file.read_bytes().await {
-                                            let data_url = data_url_from_bytes(&mime, bytes.to_vec());
+                                            let bytes_vec = bytes.to_vec();
+                                            let data_url = avif_data_url_from_bytes(bytes_vec.clone())
+                                                .unwrap_or_else(|| data_url_from_bytes(&mime, bytes_vec));
                                             send_image.call(data_url);
                                             token.set(token() + 1);
                                         }
@@ -130,6 +139,86 @@ pub fn InputBar(
                             },
                         }
                     }
+                }
+            }
+
+            {
+                let stickers_list = stickers.read().clone();
+                if let Some((x, y)) = sticker_menu() {
+                    rsx! {
+                        div {
+                            class: "fixed z-[100] rounded-xl shadow-xl p-3",
+                            style: "{menu_style(x, y, 520, 180)}; background-color: rgb(220, 220, 220);",
+                            onclick: |e| e.stop_propagation(),
+                            div { class: "grid grid-cols-8 gap-2",
+                                label {
+                                    class: "w-14 h-14 rounded-lg bg-white/60 hover:bg-white/80 transition-colors flex items-center justify-center cursor-pointer text-xs text-gray-700",
+                                    input {
+                                        key: "{sticker_input_token}",
+                                        class: "hidden",
+                                        r#type: "file",
+                                        accept: "image/*",
+                                        onchange: move |evt| {
+                                            let files: Vec<FileData> = evt.files();
+                                            if let Some(file) = files.first().cloned() {
+                                                let file_name: String = file.name();
+                                                let mime = file
+                                                    .content_type()
+                                                    .unwrap_or_else(|| mime_from_filename(&file_name).to_string());
+                                                let add_sticker = on_add_sticker;
+                                                let mut token = sticker_input_token;
+                                                spawn(async move {
+                                                    if let Ok(bytes) = file.read_bytes().await {
+                                                        let bytes_vec = bytes.to_vec();
+                                                        let data_url = avif_data_url_from_bytes(bytes_vec.clone())
+                                                            .unwrap_or_else(|| data_url_from_bytes(&mime, bytes_vec));
+                                                        add_sticker.call(data_url);
+                                                        token.set(token() + 1);
+                                                    }
+                                                });
+                                            } else {
+                                                sticker_input_token.set(sticker_input_token() + 1);
+                                            }
+                                        },
+                                    }
+                                    "上传"
+                                }
+                                button {
+                                    class: "w-14 h-14 rounded-lg bg-white/60 hover:bg-white/80 transition-colors flex items-center justify-center",
+                                    onclick: move |evt| {
+                                        let is_ctrl = evt.modifiers().ctrl();
+                                        on_send_sticker.call((STICKER_WRITEDOWN.to_string(), is_ctrl));
+                                        sticker_menu.set(None);
+                                    },
+                                    img {
+                                        src: "{STICKER_WRITEDOWN}",
+                                        class: "w-12 h-12 object-contain",
+                                    }
+                                }
+                                for sticker_src in stickers_list {
+                                    {
+                                        let sticker_value = sticker_src.clone();
+                                        rsx! {
+                                            button {
+                                                class: "w-14 h-14 rounded-lg bg-white/60 hover:bg-white/80 transition-colors flex items-center justify-center",
+                                                onclick: move |evt| {
+                                                    let is_ctrl = evt.modifiers().ctrl();
+                                                    on_send_sticker.call((sticker_value.clone(), is_ctrl));
+                                                    sticker_menu.set(None);
+                                                },
+                                                img {
+                                                    src: "{sticker_src}",
+                                                    class: "w-12 h-12 object-contain",
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    rsx! {}
                 }
             }
 
@@ -175,6 +264,14 @@ pub fn InputBar(
                 button {
                     class: "w-10 h-10 rounded-full flex items-center justify-center shadow-sm hover:brightness-95 transition-all cursor-pointer",
                     style: "background-color: rgb(240, 238, 238);",
+                    onclick: move |evt| {
+                        evt.stop_propagation();
+                        let x = evt.client_coordinates().x as i32 - 520;
+                        let y = evt.client_coordinates().y as i32 - 200;
+                        sticker_menu.set(Some((x, y)));
+                        send_menu.set(None);
+                        plus_menu.set(None);
+                    },
                     img {
                         src: "{CHAT_EMOJI}",
                         class: "w-6 h-6 object-contain opacity-80",
@@ -186,10 +283,13 @@ pub fn InputBar(
                     style: "background-color: rgb(240, 238, 238);",
                     onclick: move |evt| {
                         evt.stop_propagation();
-                        plus_menu.set(Some((
-                            evt.client_coordinates().x as i32,
-                            evt.client_coordinates().y as i32,
-                        )));
+                        plus_menu
+                            .set(
+                                Some((
+                                    evt.client_coordinates().x as i32,
+                                    evt.client_coordinates().y as i32,
+                                )),
+                            );
                     },
                     img {
                         src: "{CHAT_PLUS}",
