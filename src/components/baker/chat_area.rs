@@ -417,8 +417,8 @@ pub fn ChatArea(
                     }
                 }
 
-                div { class: "absolute inset-0 flex items-center justify-between px-6 z-[120]",
-                    div { class: "flex items-center gap-2 mt-1",
+                div { class: "absolute inset-0 flex items-center justify-between px-6",
+                    div { class: "flex items-center gap-2 ml-2 z-30",
                         span { class: "text-white font-bold text-lg", "{header_name}" }
                     }
 
@@ -448,7 +448,7 @@ pub fn ChatArea(
                         }
                         if header_menu_open() {
                             div {
-                                class: "absolute right-0 top-10 z-[200] w-32 bg-[#2b2b2b] border border-gray-600 rounded shadow-xl py-1",
+                                class: "absolute right-0 top-10 z-50 w-32 bg-[#2b2b2b] border border-gray-600 rounded shadow-xl py-1",
                                 onclick: |e| e.stop_propagation(),
                                 div {
                                     class: "px-4 py-2 hover:bg-[#3a3a3a] cursor-pointer text-white text-sm transition-colors",

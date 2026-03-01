@@ -269,12 +269,6 @@
   .z-\[100\] {
     z-index: 100;
   }
-  .z-\[120\] {
-    z-index: 120;
-  }
-  .z-\[200\] {
-    z-index: 200;
-  }
   .container {
     width: 100%;
     @media (width >= 40rem) {
@@ -355,6 +349,9 @@
   }
   .mb-\[1\.5px\] {
     margin-bottom: 1.5px;
+  }
+  .ml-2 {
+    margin-left: calc(var(--spacing) * 2);
   }
   .ml-10 {
     margin-left: calc(var(--spacing) * 10);
