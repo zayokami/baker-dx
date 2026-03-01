@@ -127,43 +127,13 @@ fn schedule_reaction_animate_off_in_list(mut list: Signal<Vec<Message>>, msg_id:
     });
 }
 
-fn parse_version(input: &str) -> Option<Vec<u64>> {
-    let trimmed = input.trim();
-    let without_prefix = trimmed.strip_prefix('v').unwrap_or(trimmed);
-    let base = without_prefix.split('-').next().unwrap_or(without_prefix);
-    let mut parts = Vec::new();
-    for part in base.split('.') {
-        let value = part.parse::<u64>().ok()?;
-        parts.push(value);
-    }
-    if parts.is_empty() {
-        None
-    } else {
-        Some(parts)
-    }
-}
+pub fn is_remote_newer(local: &str, remote: &str) -> anyhow::Result<bool> {
+    use semver::Version;
 
-fn is_remote_newer(local: &str, remote: &str) -> bool {
-    let local_parts = match parse_version(local) {
-        Some(parts) => parts,
-        None => return false,
-    };
-    let remote_parts = match parse_version(remote) {
-        Some(parts) => parts,
-        None => return false,
-    };
-    let max_len = local_parts.len().max(remote_parts.len());
-    for i in 0..max_len {
-        let a = *local_parts.get(i).unwrap_or(&0);
-        let b = *remote_parts.get(i).unwrap_or(&0);
-        if b > a {
-            return true;
-        }
-        if b < a {
-            return false;
-        }
-    }
-    false
+    let local_version = Version::parse(local)?;
+    let remote_version = Version::parse(remote)?;
+
+    Ok(remote_version > local_version)
 }
 
 pub(super) fn load_repo_config() -> Option<RepoConfig> {
@@ -237,8 +207,15 @@ pub fn BakerLayout() -> Element {
                 None => return,
             };
             let local_version = env!("CARGO_PKG_VERSION");
-            if !is_remote_newer(local_version, &latest.tag_name) {
-                return;
+            match is_remote_newer(local_version, &latest.tag_name) {
+                // 版本已经是新的了
+                Ok(false) => return,
+                // 无法比较
+                Err(err) => {
+                    error!("Failed to compare versions: {}", err);
+                    return;
+                }
+                Ok(true) => {}
             }
             let today = Utc::now().date_naive().format("%Y-%m-%d").to_string();
             let snooze_date = app_state.read().update_snooze_date.clone();
