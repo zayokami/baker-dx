@@ -10,7 +10,14 @@ fn Modal(
     children: Element,
     on_close: EventHandler,
     on_confirm: EventHandler,
+    max_width: Option<u32>,
 ) -> Element {
+    let content_style = if let Some(mw) = max_width {
+        format!("w-full max-w-[{}px] mx-auto", mw)
+    } else {
+        "w-full max-w-[340px] mx-auto".to_owned()
+    };
+
     rsx! {
         div {
             class: "fixed inset-0 bg-black/50 flex items-center justify-center z-50 backdrop-blur-sm",
@@ -37,7 +44,7 @@ fn Modal(
                             }
                         }
 
-                        div { class: "w-full max-w-[340px] mx-auto",
+                        div { class: content_style,
                             div { class: "p-4 space-y-4",
 
                                 {children}
@@ -717,94 +724,95 @@ pub fn TutorialModal(on_close: EventHandler<()>, on_confirm: EventHandler<bool>)
     let mut dont_show_again = use_signal(|| false);
 
     rsx! {
-        div {
-            class: "fixed inset-0 bg-black/50 flex items-center justify-center z-50 backdrop-blur-sm",
-            onclick: move |_| on_close.call(()),
-            div {
-                class: "bg-[#2b2b2b] w-[720px] max-w-[90vw] rounded-xl shadow-2xl overflow-hidden border border-gray-600",
-                onclick: |e| e.stop_propagation(),
-                div { class: "px-6 py-4 border-b border-gray-600 flex justify-between items-center bg-[#333]",
-                    h2 { class: "text-white text-lg font-bold", "教程" }
-                    button {
-                        class: "text-gray-400 hover:text-white transition-colors",
-                        onclick: move |_| on_close.call(()),
-                        "✕"
-                    }
-                }
-                div { class: "p-6 max-h-[60vh] overflow-y-auto custom-scrollbar text-gray-200 text-sm leading-relaxed space-y-3",
-                    h1 { class: "text-3xl font-bold", "对于 baker-dx 的简略教程" }
-                    h2 { class: "text-2xl font-bold", "1. 添加干员" }
-                    p {
-                        img { alt: "添加干员", src: IMAGE_TUTORIAL_1 }
-                    }
-                    p {
-                        img { alt: "添加干员", src: IMAGE_TUTORIAL_2 }
-                    }
-                    p { "左键双击左上角的 //BAKER/好友沟通，打开设置界面。" }
-                    p { "第一个输入框是干员名称，第二个是干员头像。" }
-                    p {
-                        "幸好应用目录 avatar/ 下有 Perlica 的头像，我们可以直接用这个。"
-                    }
-                    p { "两个空填完之后点击添加干员即可，然后关闭设置界面。" }
-                    h2 { class: "text-2xl font-bold mt-10", "2. 会话" }
-                    p {
-                        img { alt: "会话", src: IMAGE_TUTORIAL_3 }
-                    }
-                    p { "先点击左下角添加新会话，单选 Perlica 创建新会话。" }
-                    p { "点击 Perlica 的名片就可以切换到她的会话了。" }
-                    ul { style: "list-style: circle inside",
-                        li {
-                            "1 处按钮可以更改会话头部的样式，点击后会弹出一个菜单，你可以选择 2 个不同的样式。"
+        Modal {
+            title: "教程",
+            content_confirmation_button: "关闭",
+            on_close,
+            on_confirm: move |_| { on_confirm.call(dont_show_again()) },
+            max_width: 1280,
+
+            {
+                rsx! {
+                    div { class: "p-6 max-h-[60vh] overflow-y-auto custom-scrollbar text-black text-base leading-relaxed space-y-3",
+                        h1 { class: "text-3xl font-bold", "对于 baker-dx 的简略教程" }
+                        h2 { class: "text-2xl font-bold", "1. 添加干员" }
+                        p {
+                            img {
+                                class: "max-w-[600px]",
+                                alt: "添加干员",
+                                src: IMAGE_TUTORIAL_1,
+                            }
                         }
-                        li {
-                            "右键输入框右侧的菜单按钮，可以选择："
-                            ul {
-                                class: "ml-10",
-                                style: "list-style: square inside",
-                                li {
-                                    "为对方发送：将输入框中的内容以对方的身份发送。"
-                                }
-                                li {
-                                    "发送为状态：将输入框中的内容以状态行的形式发送。"
-                                    ul {
-                                        class: "ml-10",
-                                        style: "list-style: inside",
-                                        li {
-                                            "状态行：状态行是一种特殊的消息，它会在会话中以独立的行展示，通常用于展示时间等其他重要信息。"
+                        p {
+                            img {
+                                class: "max-w-[600px]",
+                                alt: "添加干员",
+                                src: IMAGE_TUTORIAL_2,
+                            }
+                        }
+                        p { "左键双击左上角的 //BAKER/会话消息，打开设置界面。" }
+                        p { "第一个输入框是干员名称，第二个是干员头像。" }
+                        p { "两个空填完之后点击添加干员即可，然后关闭设置界面。" }
+                        h2 { class: "text-2xl font-bold mt-10", "2. 会话" }
+                        p {
+                            img { class: "max-w-[600px]", alt: "会话", src: IMAGE_TUTORIAL_3 }
+                        }
+                        p { "幸好默认就有 Perlica 的实例会话，我们可以直接用这个。" }
+                        p { "点击 Perlica 的名片就可以切换到她的会话了。" }
+                        ul { style: "list-style: circle inside",
+                            li {
+                                "1 处按钮可以更改会话头部的样式，点击后会弹出一个菜单，你可以选择 2 个不同的样式。"
+                            }
+                            li {
+                                "右键输入框右侧的菜单按钮，可以选择："
+                                ul { class: "ml-10", style: "list-style: square inside",
+                                    li { "为对方发送：将输入框中的内容以对方的身份发送。" }
+                                    li {
+                                        "发送为状态：将输入框中的内容以状态行的形式发送。"
+                                        ul { class: "ml-10", style: "list-style: inside",
+                                            li {
+                                                "状态行：状态行是一种特殊的消息，它会在会话中以独立的行展示，通常用于展示时间等其他重要信息。"
+                                            }
                                         }
                                     }
                                 }
                             }
                         }
+                        h2 { class: "text-2xl font-bold mt-10", "3. 回放" }
+                        p {
+                            img {
+                                class: "max-w-[600px]",
+                                alt: "完整的聊天",
+                                src: IMAGE_TUTORIAL_4,
+                            }
+                            img {
+                                class: "max-w-[600px]",
+                                alt: "回放界面",
+                                src: IMAGE_TUTORIAL_5,
+                            }
+                        }
+                        p { "现在我们写好一段对话了。" }
+                        p { "右键一个消息，即可开始回放。" }
+                        p { "回放间隔计算有两种模式：" }
+                        ul { style: "list-style: circle inside",
+                            li { "固定间隔" }
+                            li { "按字数：根据消息的字数计算间隔" }
+                        }
+                        p {
+                            "那么两条消息发送的间隔就为：发送后间隔（第三个） + 输入间隔（就是那个输入动画的间隔）（前两个）"
+                        }
+                        p {
+                            "推荐设置为：\r\n    固定间隔 400ms + 发送后间隔 1000ms，这样子可能大差不差。\r\n    点击开始回放就好了。"
+                        }
+                        p {
+                            "（回放完之后发送消息（或者历史消息）看不到？切换其他的会话再回来就行了。）"
+                        }
+                        hr {}
+                        p {
+                            em { "如果你觉得这个软件有用，不妨分享一下？！" }
+                        }
                     }
-                    h2 { class: "text-2xl font-bold mt-10", "3. 回放" }
-                    p {
-                        img { alt: "完整的聊天", src: IMAGE_TUTORIAL_4 }
-                        img { alt: "回放界面", src: IMAGE_TUTORIAL_5 }
-                    }
-                    p { "现在我们写好一段对话了。" }
-                    p { "右键一个消息，即可开始回放。" }
-                    p { "回放间隔计算有两种模式：" }
-                    ul {
-                        li { "固定间隔" }
-                        li { "按字数：根据消息的字数计算间隔" }
-                    }
-                    p {
-                        "那么两条消息发送的间隔就为：发送后间隔（第三个） + 输入间隔（就是那个输入动画的间隔）（前两个）"
-                    }
-                    p {
-                        "推荐设置为：\r\n    固定间隔 400ms + 发送后间隔 1000ms，这样子可能大差不差。\r\n    点击开始回放就好了。"
-                    }
-                    p {
-                        "（回放完之后发送消息（或者历史消息）看不到？切换其他的会话再回来就行了。）"
-                    }
-                    hr {}
-                    p {
-                        em { "如果你觉得这个软件有用，不妨分享一下？！" }
-                    }
-                }
-                div { class: "px-6 pb-6 pt-4 border-t border-gray-600 flex items-center justify-between",
-                    label { class: "flex items-center gap-2 text-gray-300 text-sm cursor-pointer select-none",
+                    label { class: "flex items-center gap-2 text-black text-base cursor-pointer select-none",
                         input {
                             r#type: "checkbox",
                             class: "w-4 h-4 accent-blue-600",
@@ -812,11 +820,6 @@ pub fn TutorialModal(on_close: EventHandler<()>, on_confirm: EventHandler<bool>)
                             onclick: move |_| dont_show_again.set(!dont_show_again()),
                         }
                         span { "不再显示" }
-                    }
-                    button {
-                        class: "px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded text-sm font-medium",
-                        onclick: move |_| on_confirm.call(dont_show_again()),
-                        "确定"
                     }
                 }
             }

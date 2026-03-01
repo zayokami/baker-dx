@@ -832,7 +832,7 @@ pub fn BakerLayout() -> Element {
                         ondoubleclick: move |_| {
                             navigator.push(Route::SettingsPage {});
                         },
-                        "//BAKER/好友沟通"
+                        "//BAKER/会话消息"
                     }
                     if !hide_tutorial {
                         a {

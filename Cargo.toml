@@ -1,6 +1,6 @@
 [package]
 name = "baker-dx"
-version = "1.0.0-rc.2"
+version = "1.0.0"
 authors = ["Wanye_7300 <chensiyuan-2009@outlook.com>"]
 edition = "2021"
 
