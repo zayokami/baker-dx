@@ -9,6 +9,7 @@ pub fn Sidebar(
     operators: ReadSignal<Vec<Operator>>,
     selected_contact_id: Signal<Option<String>>,
     on_add_click: EventHandler<()>,
+    need_to_scroll_down: Signal<bool>,
 ) -> Element {
     let contacts_list = contacts.read().clone();
     let ops_list = operators.read().clone();
@@ -27,7 +28,10 @@ pub fn Sidebar(
                                 contact: contact.clone(),
                                 operator,
                                 is_selected: selected_contact_id() == Some(contact.id.clone()),
-                                onclick: move |_| selected_contact_id.set(Some(contact.id.clone())),
+                                onclick: move |_| {
+                                    selected_contact_id.set(Some(contact.id.clone()));
+                                    need_to_scroll_down.set(true);
+                                },
                             }
                         }
                     }

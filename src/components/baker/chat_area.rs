@@ -44,6 +44,7 @@ pub fn ChatArea(
     first_prev_sender_id: Option<String>,
     force_first_avatar: bool,
     pending_typing: ReadSignal<Option<PendingTyping>>,
+    need_to_scroll_down: Signal<bool>,
     on_send_message: EventHandler<String>,
     on_send_other_message: EventHandler<(String, String)>,
     on_send_status: EventHandler<String>,
@@ -85,6 +86,9 @@ pub fn ChatArea(
     use_effect(move || {
         messages.read();
         pending_typing.read();
+        if !need_to_scroll_down() {
+            return;
+        }
         spawn(async move {
             let eval = document::eval(
                 r#"
@@ -110,29 +114,33 @@ pub fn ChatArea(
     let mut handle_delete = move |id: String| {
         on_delete_message.call(id);
         context_menu.set(None);
+        need_to_scroll_down.set(false);
     };
-
     let handle_edit_save = move |new_content: String| {
         if let Some(id) = editing_msg_id() {
             on_edit_message.call((id, new_content));
         }
         editing_msg_id.set(None);
+        need_to_scroll_down.set(false);
     };
     let handle_insert_save = move |(content, sender_id): (String, Option<String>)| {
         if let Some(before_id) = insert_before_id() {
             on_insert_message.call((before_id, content, sender_id));
         }
         insert_before_id.set(None);
+        need_to_scroll_down.set(false);
     };
     let handle_reaction_save = move |reaction: String| {
         if let Some(id) = reaction_msg_id() {
             on_add_reaction.call((id, reaction));
         }
         reaction_msg_id.set(None);
+        need_to_scroll_down.set(false);
     };
     let mut handle_delete_reaction = move |id: String| {
         on_delete_reaction.call(id);
         context_menu.set(None);
+        need_to_scroll_down.set(false);
     };
     let user_id = user_profile.id.clone();
     let user_profile = Rc::new(user_profile);
@@ -632,6 +640,7 @@ pub fn ChatArea(
                             menu_close_token,
                             sticker_menu: sticker_menu_state,
                             clear_text_token: clear_input_token,
+                            need_to_scroll_down,
                         }
                     }
                 }

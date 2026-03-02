@@ -576,6 +576,8 @@ pub fn BakerLayout() -> Element {
         }
     });
 
+    let need_to_scroll_down = use_signal(|| false);
+
     let mut start_replay = {
         let mut replay_messages = replay_messages;
         let mut replay_active = replay_active;
@@ -583,6 +585,7 @@ pub fn BakerLayout() -> Element {
         let mut replay_pending = replay_pending;
         let app_state = app_state;
         let selected_contact_id = selected_contact_id;
+        let mut need_to_scroll_down = need_to_scroll_down;
         move |start_msg_id: String, settings: ReplaySettings| {
             let contact_id = match selected_contact_id() {
                 Some(id) => id,
@@ -637,6 +640,7 @@ pub fn BakerLayout() -> Element {
                         let is_self = msg.sender_id == user_id;
                         play_message_sound(is_self);
                         schedule_animate_off_in_list(replay_messages_async, msg.id);
+                        need_to_scroll_down.set(true);
                         continue;
                     }
                     let typing_ms = match msg.kind {
@@ -672,6 +676,7 @@ pub fn BakerLayout() -> Element {
                             id: msg_id,
                             phase: ReplayTypingPhase::Reveal,
                         }));
+                        need_to_scroll_down.set(true);
                         play_message_sound(false);
                         sleep_ms(200).await;
                         replay_pending_async.set(None);
@@ -702,6 +707,7 @@ pub fn BakerLayout() -> Element {
                                 ..msg.clone()
                             });
                         });
+                        need_to_scroll_down.set(true);
                         play_message_sound(true);
                         schedule_animate_off_in_list(replay_messages_async, msg.id.clone());
                         if !msg.reactions.is_empty() {
@@ -877,6 +883,7 @@ pub fn BakerLayout() -> Element {
                         cancel_replay();
                         show_new_chat.set(true);
                     },
+                    need_to_scroll_down,
                 }
 
                 // 右侧聊天区
@@ -903,6 +910,7 @@ pub fn BakerLayout() -> Element {
                                 first_prev_sender_id: replay_prev_sender_id,
                                 force_first_avatar,
                                 pending_typing: replay_pending_for_contact,
+                                need_to_scroll_down,
                                 on_send_message: handle_send,
                                 on_send_other_message: move |(sender_id, text)| {
                                     handle_send_other(sender_id, text);

@@ -26,6 +26,7 @@ pub fn InputBar(
     menu_close_token: ReadSignal<usize>,
     sticker_menu: Signal<Option<(i32, i32)>>,
     clear_text_token: ReadSignal<usize>,
+    need_to_scroll_down: Signal<bool>,
 ) -> Element {
     let mut text = use_signal(String::new);
     let mut send_menu = use_signal(|| Option::<(i32, i32)>::None);
@@ -37,6 +38,7 @@ pub fn InputBar(
         let val = text.read().clone();
         if !val.trim().is_empty() {
             on_send.call(val);
+            need_to_scroll_down.set(true);
             text.set(String::new());
         }
     };
@@ -44,6 +46,7 @@ pub fn InputBar(
         let val = text.read().clone();
         if !val.trim().is_empty() {
             on_send_other.call(val);
+            need_to_scroll_down.set(true);
             text.set(String::new());
         }
     };
@@ -51,6 +54,7 @@ pub fn InputBar(
         let val = text.read().clone();
         if !val.trim().is_empty() {
             on_send_status.call(val);
+            need_to_scroll_down.set(true);
             text.set(String::new());
         }
     };
@@ -151,8 +155,7 @@ pub fn InputBar(
                             style: "{menu_style(x, y, 520, 180)}; background-color: rgb(220, 220, 220);",
                             onclick: |e| e.stop_propagation(),
                             div { class: "grid grid-cols-8 gap-2",
-                                label {
-                                    class: "w-14 h-14 rounded-lg bg-white/60 hover:bg-white/80 transition-colors flex items-center justify-center cursor-pointer text-xs text-gray-700",
+                                label { class: "w-14 h-14 rounded-lg bg-white/60 hover:bg-white/80 transition-colors flex items-center justify-center cursor-pointer text-xs text-gray-700",
                                     input {
                                         key: "{sticker_input_token}",
                                         class: "hidden",
@@ -190,10 +193,7 @@ pub fn InputBar(
                                         on_send_sticker.call((STICKER_WRITEDOWN.to_string(), is_ctrl));
                                         sticker_menu.set(None);
                                     },
-                                    img {
-                                        src: "{STICKER_WRITEDOWN}",
-                                        class: "w-12 h-12 object-contain",
-                                    }
+                                    img { src: "{STICKER_WRITEDOWN}", class: "w-12 h-12 object-contain" }
                                 }
                                 for sticker_src in stickers_list {
                                     {
@@ -206,10 +206,7 @@ pub fn InputBar(
                                                     on_send_sticker.call((sticker_value.clone(), is_ctrl));
                                                     sticker_menu.set(None);
                                                 },
-                                                img {
-                                                    src: "{sticker_src}",
-                                                    class: "w-12 h-12 object-contain",
-                                                }
+                                                img { src: "{sticker_src}", class: "w-12 h-12 object-contain" }
                                             }
                                         }
                                     }
