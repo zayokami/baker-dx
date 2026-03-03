@@ -3,6 +3,18 @@ use crate::components::baker::{avif_data_url_from_bytes, data_url_from_bytes, mi
 use crate::dioxus_elements::FileData;
 use dioxus::prelude::*;
 
+///
+/// 弹窗的模板。
+///
+/// # 参数
+///
+/// - title: 弹窗标题。
+/// - content_confirmation_button: “确定”按钮的内容。典型例子就是“确定”。
+/// - children: 弹窗内容。
+/// - on_close: 处理关闭弹窗的事件。
+/// - on_confirm: 处理按下“确定”按钮的事件。本组件在 call 这个事件的时候不会自动 call on_close 事件。
+/// - max_width: （可选）弹窗中内容的最大宽度。
+///
 #[component]
 fn Modal(
     title: &'static str,
@@ -72,20 +84,39 @@ fn Modal(
     }
 }
 
+///
+/// 回放间隔模式。
+///
 #[derive(Clone, PartialEq)]
 pub enum ReplayIntervalMode {
+    /// 固定间隔
     Fixed,
+    /// 按字数：当前消息字数 * 每个字的间隔。请注意，当消息为表情包和图片时仍按照固定间隔处理
     PerChar,
 }
 
+///
+/// 回放设置。
+///
 #[derive(Clone, PartialEq)]
 pub struct ReplaySettings {
+    /// 回放间隔模式
     pub mode: ReplayIntervalMode,
+    /// 当设为固定间隔时的间隔
     pub fixed_ms: u64,
+    /// 当设为按字数时，每个字的间隔
     pub per_char_ms: u64,
+    /// 发送后的间隔
     pub gap_ms: u64,
 }
 
+///
+/// 回放设置的弹窗。
+///
+/// # 参数
+///
+/// - on_start: 处理开始回放的事件。
+///
 #[component]
 pub fn ReplaySettingsModal(
     on_close: EventHandler<()>,
@@ -178,6 +209,11 @@ pub fn ReplaySettingsModal(
     }
 }
 
+///
+/// 个人资料设置的弹窗
+///
+/// TODO: 将其移动进设置页面
+///
 #[component]
 pub fn ProfileModal(
     current_name: String,
@@ -277,6 +313,13 @@ pub fn ProfileModal(
     }
 }
 
+///
+/// 编辑消息的弹窗。
+///
+/// # 参数
+///
+/// - initial_content: 初始内容
+///
 #[component]
 pub fn EditMessageModal(
     initial_content: String,
@@ -307,6 +350,9 @@ pub fn EditMessageModal(
     }
 }
 
+///
+/// 添加反应的弹窗。
+///
 #[component]
 pub fn ReactionModal(on_close: EventHandler<()>, on_save: EventHandler<String>) -> Element {
     let mut reaction = use_signal(|| "".to_string());
@@ -365,6 +411,14 @@ pub fn ReactionModal(on_close: EventHandler<()>, on_save: EventHandler<String>) 
     }
 }
 
+///
+/// 告知用户有可用更新的弹窗。
+///
+/// # 参数
+///
+/// - latest_version: 最新的版本
+/// - release_url: 正式版的 url
+///
 #[component]
 pub fn UpdateAvailableModal(
     latest_version: String,
@@ -404,6 +458,13 @@ pub fn UpdateAvailableModal(
     }
 }
 
+///
+/// 选择发送者的弹窗。
+///
+/// # 参数
+///
+/// - members: 干员列表
+///
 #[component]
 pub fn PickSenderModal(
     members: Vec<Operator>,
@@ -458,6 +519,13 @@ pub fn PickSenderModal(
     }
 }
 
+///
+/// 在……前插入消息的弹窗。
+///
+/// # 参数
+///
+/// - members: 干员列表
+///
 #[component]
 pub fn InsertMessageModal(
     members: Vec<Operator>,
@@ -549,16 +617,31 @@ pub fn InsertMessageModal(
     }
 }
 
+///
+/// 新会话的类别
+///
 #[derive(Clone, PartialEq)]
 pub enum NewChatSelection {
+    /// 单人
     Single(Operator),
+    /// 群组
     Group {
+        /// 群组名
         name: String,
+        /// 群组头像 url
         avatar_url: String,
+        /// 群员。不包括自己。
         member_ids: Vec<String>,
     },
 }
 
+///
+/// 发起新会话的弹窗。
+///
+/// # 参数
+///
+/// operators: 干员列表
+///
 #[component]
 pub fn NewChatModal(
     operators: Signal<Vec<Operator>>,
@@ -713,6 +796,9 @@ pub fn NewChatModal(
     }
 }
 
+///
+/// 用于 SetGroupOpsListModal 设置的干员列表。
+///
 #[derive(PartialEq, Clone)]
 pub(crate) struct OpsSelection {
     pub ops: Vec<String>,
@@ -819,6 +905,9 @@ const IMAGE_TUTORIAL_3: Asset = asset!("/tutorial/3.png");
 const IMAGE_TUTORIAL_4: Asset = asset!("/tutorial/4.png");
 const IMAGE_TUTORIAL_5: Asset = asset!("/tutorial/5.png");
 
+///
+/// 教程弹窗。
+///
 #[component]
 pub fn TutorialModal(on_close: EventHandler<()>, on_confirm: EventHandler<bool>) -> Element {
     let mut dont_show_again = use_signal(|| false);
