@@ -580,6 +580,8 @@ pub fn BakerLayout() -> Element {
                 let contact = contact.unwrap();
 
                 contact.participant_ids = ops_selection.ops;
+                contact.name = ops_selection.name;
+                contact.avatar_url = ops_selection.avatar_url;
             }
         }
     };

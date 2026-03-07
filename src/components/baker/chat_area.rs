@@ -1,7 +1,7 @@
 use crate::components::baker::input_bar::InputBar;
 use crate::components::baker::modals::{
-    EditMessageModal, InsertMessageModal, OpsSelection, PickSenderModal, ReactionModal,
-    SetGroupOpsListModal,
+    EditGroupChatProps, EditMessageModal, InsertMessageModal, OpsSelection, PickSenderModal,
+    ReactionModal,
 };
 use crate::components::baker::models::{
     ChatHeadStyle, Contact, Message, MessageKind, Operator, UserProfile,
@@ -406,13 +406,13 @@ pub fn ChatArea(
                 }
             }
             if show_set_group_ops_list() {
-                SetGroupOpsListModal {
+                EditGroupChatProps {
                     on_close: move |_| show_set_group_ops_list.set(false),
                     on_select: move |ops_selection| {
                         on_set_group_ops_list.call(ops_selection);
                         show_set_group_ops_list.set(false);
                     },
-                    selected_contact_id: Some(contact.id.clone()),
+                    selected_contact_id: contact.id.clone(),
                 }
             }
 
@@ -525,7 +525,7 @@ pub fn ChatArea(
                                                     show_set_group_ops_list.set(true);
                                                     header_menu_open.set(false);
                                                 },
-                                                "更改群组干员名单……"
+                                                "群组设置……"
                                             }
                                         }
                                     } else {
@@ -823,7 +823,7 @@ fn MessageBubble(
             }
             div { class: "relative w-full min-w-0 {row_align_class}",
                 if show_avatar {
-                    div { class: "w-14 h-14 bg-gray-600 border border-gray-500 shrink-0 flex items-center justify-center text-xs text-gray-300 rounded-sm overflow-hidden {avatar_slot_class}",
+                    div { class: "w-14 h-14 bg-gray-600 border border-gray-500 shrink-0 flex items-center justify-center text-xs text-gray-300 rounded-full overflow-hidden {avatar_slot_class}",
                         if is_self {
                             if !user_profile.avatar_url.is_empty() {
                                 img {
