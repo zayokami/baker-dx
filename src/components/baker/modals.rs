@@ -50,7 +50,7 @@ fn Modal(
                                 {title}
                             }
                             button {
-                                class: "w-7 h-7 rounded flex items-center justify-center text-black hover:bg-black/10 transition-colors",
+                                class: "w-7 h-7 rounded flex items-center justify-center text-black hover:bg-black/10 transition-colors cursor-pointer",
                                 onclick: move |_| on_close.call(()),
                                 "✕"
                             }
@@ -63,12 +63,12 @@ fn Modal(
 
                                 div { class: "flex justify-end gap-3",
                                     button {
-                                        class: "px-4 py-2 text-black hover:text-gray-400 text-sm",
+                                        class: "px-4 py-2 text-black hover:text-gray-400 text-sm cursor-pointer",
                                         onclick: move |_| on_close.call(()),
                                         "取消"
                                     }
                                     button {
-                                        class: "px-4 py-2 bg-[#fdfc00] hover:bg-[#fdfc00]/60 text-black rounded text-sm font-medium",
+                                        class: "px-4 py-2 bg-[#fdfc00] hover:bg-[#fdfc00]/60 text-black rounded text-sm font-medium cursor-pointer",
                                         onclick: move |_| {
                                             on_confirm.call(());
                                         },
@@ -496,7 +496,7 @@ pub fn PickSenderModal(
                                 let is_selected = selected_id() == Some(member_id.clone());
                                 rsx! {
                                     button {
-                                        class: if is_selected { "flex items-center gap-3 p-3 rounded bg-black/10 transition-colors text-left group" } else { "flex items-center gap-3 p-3 rounded hover:bg-black/5 transition-colors text-left group" },
+                                        class: if is_selected { "flex items-center gap-3 p-3 rounded bg-black/10 transition-colors text-left group cursor-pointer" } else { "flex items-center gap-3 p-3 rounded hover:bg-black/5 transition-colors text-left group cursor-pointer" },
                                         onclick: move |_| selected_id.set(Some(member_id.clone())),
                                         div { class: if is_selected { "w-10 h-10 rounded bg-gray-300 flex items-center justify-center overflow-hidden border border-black/40" } else { "w-10 h-10 rounded bg-gray-300 flex items-center justify-center overflow-hidden border border-black/10 group-hover:border-black/30" },
                                             if !member_avatar.is_empty() {
@@ -596,12 +596,12 @@ pub fn InsertMessageModal(
             div { class: "space-y-4",
                 div { class: "flex gap-2",
                     button {
-                        class: "flex-1 px-3 py-2 rounded text-sm font-medium transition-colors {self_class}",
+                        class: "flex-1 px-3 py-2 rounded text-sm font-medium transition-colors cursor-pointer {self_class}",
                         onclick: move |_| is_self.set(true),
                         "我方"
                     }
                     button {
-                        class: "flex-1 px-3 py-2 rounded text-sm font-medium transition-colors {other_class}",
+                        class: "flex-1 px-3 py-2 rounded text-sm font-medium transition-colors cursor-pointer {other_class}",
                         onclick: move |_| is_self.set(false),
                         "对方"
                     }
@@ -705,7 +705,7 @@ pub fn NewChatModal(
                                         let op_id_for_click = op_id.clone();
                                         rsx! {
                                             div {
-                                                class: "flex items-center gap-3 p-3 rounded hover:bg-black/20 transition-colors text-left group",
+                                                class: "flex items-center gap-3 p-3 rounded hover:bg-black/20 transition-colors text-left group cursor-pointer",
                                                 onclick: move |_| {
                                                     error_text.set("".to_string());
                                                     selected_ids
@@ -719,7 +719,7 @@ pub fn NewChatModal(
                                                 },
                                                 input {
                                                     r#type: "checkbox",
-                                                    class: "w-4 h-4 accent-blue-600",
+                                                    class: "w-4 h-4 accent-blue-600 cursor-pointer",
                                                     checked: selected_ids().contains(&op_id),
                                                 }
                                                 div { class: "w-10 h-10 rounded bg-gray-600 flex items-center justify-center overflow-hidden border border-gray-500 group-hover:border-blue-500",
@@ -751,7 +751,7 @@ pub fn NewChatModal(
                                         },
                                     }
                                     input {
-                                        class: "w-full bg-[#e9e9e9] border border-black/10 rounded p-3 text-black text-sm focus:outline-none focus:border-black/30 resize-none",
+                                        class: "w-full bg-[#e9e9e9] border border-black/10 rounded p-3 text-black text-sm focus:outline-none focus:border-black/30 resize-none cursor-pointer",
                                         r#type: "file",
                                         accept: "image/*",
                                         onchange: move |evt| {
@@ -899,7 +899,7 @@ pub fn EditGroupChatProps(
                                 div { class: "flex-1 space-y-1",
                                     input {
                                         key: "{avatar_file_input_key}",
-                                        class: "w-full bg-[#e9e9e9] border border-black/10 rounded p-3 text-black text-sm focus:outline-none focus:border-black/30 resize-none",
+                                        class: "w-full bg-[#e9e9e9] border border-black/10 rounded p-3 text-black text-sm focus:outline-none focus:border-black/30 resize-none cursor-pointer",
                                         r#type: "file",
                                         accept: "image/*",
                                         onchange: move |evt| {
@@ -922,7 +922,7 @@ pub fn EditGroupChatProps(
                                         },
                                     }
                                     button {
-                                        class: "text-sm text-blue-600 hover:text-blue-700 underline",
+                                        class: "text-sm text-blue-600 hover:text-blue-700 underline cursor-pointer",
                                         onclick: move |_| {
                                             group_avatar.set("".to_string());
                                             avatar_file_input_key.set(avatar_file_input_key() + 1);
@@ -949,7 +949,7 @@ pub fn EditGroupChatProps(
                                     let op_id_for_click = op_id.clone();
                                     rsx! {
                                         div {
-                                            class: "flex items-center gap-3 p-3 rounded hover:bg-black/20 transition-colors text-left group",
+                                            class: "flex items-center gap-3 p-3 rounded hover:bg-black/20 transition-colors text-left group cursor-pointer",
                                             onclick: move |_| {
                                                 group_ops_list
                                                     .with_mut(|list| {
@@ -962,7 +962,7 @@ pub fn EditGroupChatProps(
                                             },
                                             input {
                                                 r#type: "checkbox",
-                                                class: "w-4 h-4 accent-blue-600",
+                                                class: "w-4 h-4 accent-blue-600 cursor-pointer",
                                                 checked: group_ops_list().contains(&op_id),
                                             }
                                             div { class: "w-10 h-10 rounded bg-gray-600 flex items-center justify-center overflow-hidden border border-gray-500 group-hover:border-blue-500",
