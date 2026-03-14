@@ -140,7 +140,7 @@ pub fn SettingsPage() -> Element {
             style: "{background_style}",
             div { class: "h-14 flex items-center gap-3 px-6 border-b border-gray-600 bg-[#1f1f1f]/80 backdrop-blur-sm",
                 button {
-                    class: "text-gray-300 hover:text-white text-lg px-2 py-1 rounded-lg hover:bg-white/5 transition-colors",
+                    class: "text-gray-300 hover:text-white text-lg px-2 py-1 rounded-lg hover:bg-white/5 transition-colors cursor-pointer",
                     onclick: move |_| {
                         navigator.push(Route::BakerLayout {});
                     },
@@ -152,17 +152,17 @@ pub fn SettingsPage() -> Element {
                 div { class: "w-64 shrink-0 border-r border-gray-700 bg-[#1f1f1f]/70 p-4",
                     div { class: "space-y-2",
                         button {
-                            class: "w-full text-left px-3 py-2 rounded-lg text-sm transition-colors {operators_tab_class}",
+                            class: "w-full text-left px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer {operators_tab_class}",
                             onclick: move |_| section.set(SettingsSection::Operators),
                             "干员管理"
                         }
                         button {
-                            class: "w-full text-left px-3 py-2 rounded-lg text-sm transition-colors {background_tab_class}",
+                            class: "w-full text-left px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer {background_tab_class}",
                             onclick: move |_| section.set(SettingsSection::Background),
                             "背景设置"
                         }
                         button {
-                            class: "w-full text-left px-3 py-2 rounded-lg text-sm transition-colors {about_tab_class}",
+                            class: "w-full text-left px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer {about_tab_class}",
                             onclick: move |_| section.set(SettingsSection::About),
                             "关于"
                         }
@@ -183,7 +183,7 @@ pub fn SettingsPage() -> Element {
                                         oninput: move |e| new_name.set(e.value()),
                                     }
                                     input {
-                                        class: "w-full bg-[#222] border border-gray-600 rounded px-3 py-2 text-white text-sm focus:outline-none focus:border-blue-500",
+                                        class: "w-full bg-[#222] border border-gray-600 rounded px-3 py-2 text-white text-sm focus:outline-none focus:border-blue-500 cursor-pointer",
                                         r#type: "file",
                                         accept: "image/*",
                                         onchange: move |evt| {
@@ -207,7 +207,7 @@ pub fn SettingsPage() -> Element {
                                     }
                                 }
                                 button {
-                                    class: "w-full bg-blue-600 hover:bg-blue-500 text-white py-2 rounded text-sm font-medium transition-colors",
+                                    class: "w-full bg-blue-600 hover:bg-blue-500 text-white py-2 rounded text-sm font-medium transition-colors cursor-pointer",
                                     onclick: handle_add,
                                     "添加干员"
                                 }
@@ -239,7 +239,7 @@ pub fn SettingsPage() -> Element {
                                                         }
                                                     }
                                                     input {
-                                                        class: "w-full bg-[#222] border border-gray-600 rounded px-3 py-2 text-white text-sm focus:outline-none focus:border-blue-500",
+                                                        class: "w-full bg-[#222] border border-gray-600 rounded px-3 py-2 text-white text-sm focus:outline-none focus:border-blue-500 cursor-pointer",
                                                         r#type: "file",
                                                         accept: "image/*",
                                                         onchange: move |evt| {
@@ -263,12 +263,12 @@ pub fn SettingsPage() -> Element {
                                                     }
                                                     div { class: "flex justify-end gap-3",
                                                         button {
-                                                            class: "px-3 py-1 text-gray-400 hover:text-white text-sm",
+                                                            class: "px-3 py-1 text-gray-400 hover:text-white text-sm cursor-pointer",
                                                             onclick: move |_| handle_edit_cancel(()),
                                                             "取消"
                                                         }
                                                         button {
-                                                            class: "px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded text-sm font-medium",
+                                                            class: "px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded text-sm font-medium cursor-pointer",
                                                             onclick: move |_| handle_edit_save(op_id.clone()),
                                                             "保存"
                                                         }
@@ -293,12 +293,12 @@ pub fn SettingsPage() -> Element {
                                                     }
                                                     div { class: "flex items-center gap-3",
                                                         button {
-                                                            class: "text-gray-300 hover:text-white text-sm px-2 py-1",
+                                                            class: "text-gray-300 hover:text-white text-sm px-2 py-1 cursor-pointer",
                                                             onclick: move |_| handle_edit_start(op_clone.clone()),
                                                             "编辑"
                                                         }
                                                         button {
-                                                            class: "text-red-400 hover:text-red-300 text-sm px-2 py-1",
+                                                            class: "text-red-400 hover:text-red-300 text-sm px-2 py-1 cursor-pointer",
                                                             onclick: move |_| handle_delete(op_id.clone()),
                                                             "删除"
                                                         }
@@ -350,7 +350,7 @@ pub fn SettingsPage() -> Element {
                                 if matches!(current_background.mode, BackgroundMode::CustomImage) {
                                     div { class: "flex items-center gap-3",
                                         input {
-                                            class: "flex-1 bg-[#222] border border-gray-600 rounded px-3 py-2 text-white text-sm focus:outline-none focus:border-blue-500",
+                                            class: "flex-1 bg-[#222] border border-gray-600 rounded px-3 py-2 text-white text-sm focus:outline-none focus:border-blue-500 cursor-pointer",
                                             r#type: "file",
                                             accept: "image/*",
                                             onchange: move |evt| {

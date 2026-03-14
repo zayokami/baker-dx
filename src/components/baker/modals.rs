@@ -50,7 +50,7 @@ pub(crate) fn Modal(
                                 {title}
                             }
                             button {
-                                class: "w-7 h-7 rounded flex items-center justify-center text-black hover:bg-black/10 transition-colors",
+                                class: "w-7 h-7 rounded flex items-center justify-center text-black hover:bg-black/10 transition-colors cursor-pointer",
                                 onclick: move |_| on_close.call(()),
                                 "✕"
                             }
@@ -63,12 +63,12 @@ pub(crate) fn Modal(
 
                                 div { class: "flex justify-end gap-3",
                                     button {
-                                        class: "px-4 py-2 text-black hover:text-gray-400 text-sm",
+                                        class: "px-4 py-2 text-black hover:text-gray-400 text-sm cursor-pointer",
                                         onclick: move |_| on_close.call(()),
                                         "取消"
                                     }
                                     button {
-                                        class: "px-4 py-2 bg-[#fdfc00] hover:bg-[#fdfc00]/60 text-black rounded text-sm font-medium",
+                                        class: "px-4 py-2 bg-[#fdfc00] hover:bg-[#fdfc00]/60 text-black rounded text-sm font-medium cursor-pointer",
                                         onclick: move |_| {
                                             on_confirm.call(());
                                         },
@@ -496,7 +496,7 @@ pub fn PickSenderModal(
                                 let is_selected = selected_id() == Some(member_id.clone());
                                 rsx! {
                                     button {
-                                        class: if is_selected { "flex items-center gap-3 p-3 rounded bg-black/10 transition-colors text-left group" } else { "flex items-center gap-3 p-3 rounded hover:bg-black/5 transition-colors text-left group" },
+                                        class: if is_selected { "flex items-center gap-3 p-3 rounded bg-black/10 transition-colors text-left group cursor-pointer" } else { "flex items-center gap-3 p-3 rounded hover:bg-black/5 transition-colors text-left group cursor-pointer" },
                                         onclick: move |_| selected_id.set(Some(member_id.clone())),
                                         div { class: if is_selected { "w-10 h-10 rounded bg-gray-300 flex items-center justify-center overflow-hidden border border-black/40" } else { "w-10 h-10 rounded bg-gray-300 flex items-center justify-center overflow-hidden border border-black/10 group-hover:border-black/30" },
                                             if !member_avatar.is_empty() {
@@ -596,12 +596,12 @@ pub fn InsertMessageModal(
             div { class: "space-y-4",
                 div { class: "flex gap-2",
                     button {
-                        class: "flex-1 px-3 py-2 rounded text-sm font-medium transition-colors {self_class}",
+                        class: "flex-1 px-3 py-2 rounded text-sm font-medium transition-colors cursor-pointer {self_class}",
                         onclick: move |_| is_self.set(true),
                         "我方"
                     }
                     button {
-                        class: "flex-1 px-3 py-2 rounded text-sm font-medium transition-colors {other_class}",
+                        class: "flex-1 px-3 py-2 rounded text-sm font-medium transition-colors cursor-pointer {other_class}",
                         onclick: move |_| is_self.set(false),
                         "对方"
                     }
@@ -705,7 +705,7 @@ pub fn NewChatModal(
                                         let op_id_for_click = op_id.clone();
                                         rsx! {
                                             div {
-                                                class: "flex items-center gap-3 p-3 rounded hover:bg-black/20 transition-colors text-left group",
+                                                class: "flex items-center gap-3 p-3 rounded hover:bg-black/20 transition-colors text-left group cursor-pointer",
                                                 onclick: move |_| {
                                                     error_text.set("".to_string());
                                                     selected_ids
@@ -719,7 +719,7 @@ pub fn NewChatModal(
                                                 },
                                                 input {
                                                     r#type: "checkbox",
-                                                    class: "w-4 h-4 accent-blue-600",
+                                                    class: "w-4 h-4 accent-blue-600 cursor-pointer",
                                                     checked: selected_ids().contains(&op_id),
                                                 }
                                                 div { class: "w-10 h-10 rounded bg-gray-600 flex items-center justify-center overflow-hidden border border-gray-500 group-hover:border-blue-500",
@@ -751,7 +751,7 @@ pub fn NewChatModal(
                                         },
                                     }
                                     input {
-                                        class: "w-full bg-[#e9e9e9] border border-black/10 rounded p-3 text-black text-sm focus:outline-none focus:border-black/30 resize-none",
+                                        class: "w-full bg-[#e9e9e9] border border-black/10 rounded p-3 text-black text-sm focus:outline-none focus:border-black/30 resize-none cursor-pointer",
                                         r#type: "file",
                                         accept: "image/*",
                                         onchange: move |evt| {
@@ -802,27 +802,30 @@ pub fn NewChatModal(
 #[derive(PartialEq, Clone)]
 pub(crate) struct OpsSelection {
     pub ops: Vec<String>,
+    pub name: String,
+    pub avatar_url: String,
 }
 
 ///
-/// 用于设置特定群聊中干员名单的列表弹窗。
+/// 用于设置特定群聊中各项信息的弹窗。
 ///
 #[component]
-pub fn SetGroupOpsListModal(
+pub fn EditGroupChatProps(
     on_close: EventHandler,
     on_select: EventHandler<OpsSelection>,
-    selected_contact_id: Option<String>,
+    selected_contact_id: String,
 ) -> Element {
     let app_state = use_context::<Signal<crate::components::baker::models::AppState>>();
 
-    let operators = &app_state.read().operators;
     let app_state_read = app_state.read();
-    let group_ops_list = match selected_contact_id.clone() {
-        Some(id) => app_state_read.contacts.iter().find(|x| x.id == id),
-        None => None,
-    };
+    let operators = app_state_read.operators.clone();
+    let contact = app_state_read
+        .contacts
+        .iter()
+        .find(|x| x.id == selected_contact_id)
+        .cloned();
 
-    if group_ops_list.is_none() {
+    if contact.is_none() {
         return rsx! {
             Modal {
                 title: "错误",
@@ -837,25 +840,108 @@ pub fn SetGroupOpsListModal(
         };
     }
 
-    let mut group_ops_list = use_signal(|| group_ops_list.unwrap().participant_ids.clone());
+    let contact = contact.unwrap();
+    let mut group_ops_list = use_signal(|| contact.participant_ids.clone());
+    let mut group_name = use_signal(|| contact.name.clone());
+    let mut group_avatar = use_signal(|| contact.avatar_url.clone());
+    let mut avatar_file_input_key = use_signal(|| 0usize);
+    let mut error_text = use_signal(|| "".to_string());
 
     rsx! {
         Modal {
-            title: "设置群组干员列表",
-            content_confirmation_button: "确定",
+            title: "群组设置",
+            content_confirmation_button: "好",
             on_close,
             on_confirm: move |_| {
+                let name = group_name().trim().to_string();
+                if name.is_empty() {
+                    error_text.set("请输入群组名称".to_string());
+                    return;
+                }
                 on_select
                     .call(OpsSelection {
                         ops: group_ops_list(),
+                        name,
+                        avatar_url: group_avatar(),
                     })
             },
 
             {
                 rsx! {
+                    div { class: "space-y-4",
+                        div {
+                            label { class: "block text-black text-sm mb-1", "群组名称" }
+                            input {
+                                class: "w-full bg-[#e9e9e9] border border-black/10 rounded p-3 text-black text-sm focus:outline-none focus:border-black/30 resize-none",
+                                placeholder: "请输入群组名称",
+                                value: "{group_name}",
+                                oninput: move |e| {
+                                    group_name.set(e.value());
+                                    error_text.set("".to_string());
+                                },
+                            }
+                        }
+                        div {
+                            label { class: "block text-black text-sm mb-1", "群组头像" }
+                            div { class: "flex items-center gap-3",
+                                div { class: "w-14 h-14 rounded bg-gray-600 flex items-center justify-center overflow-hidden border border-gray-500 shrink-0",
+                                    if !group_avatar().is_empty() {
+                                        img {
+                                            src: "{group_avatar}",
+                                            class: "w-full h-full object-cover",
+                                        }
+                                    } else {
+                                        span { class: "text-white font-bold text-lg",
+                                            "{group_name.read().chars().next().unwrap_or('?')}"
+                                        }
+                                    }
+                                }
+                                div { class: "flex-1 space-y-1",
+                                    input {
+                                        key: "{avatar_file_input_key}",
+                                        class: "w-full bg-[#e9e9e9] border border-black/10 rounded p-3 text-black text-sm focus:outline-none focus:border-black/30 resize-none cursor-pointer",
+                                        r#type: "file",
+                                        accept: "image/*",
+                                        onchange: move |evt| {
+                                            let files: Vec<FileData> = evt.files();
+                                            if let Some(file) = files.first().cloned() {
+                                                let file_name: String = file.name();
+                                                let mime = file
+                                                    .content_type()
+                                                    .unwrap_or_else(|| mime_from_filename(&file_name).to_string());
+                                                let mut preview = group_avatar;
+                                                spawn(async move {
+                                                    if let Ok(bytes) = file.read_bytes().await {
+                                                        let bytes_vec = bytes.to_vec();
+                                                        let data_url = avif_data_url_from_bytes(bytes_vec.clone())
+                                                            .unwrap_or_else(|| data_url_from_bytes(&mime, bytes_vec));
+                                                        preview.set(data_url);
+                                                    }
+                                                });
+                                            }
+                                        },
+                                    }
+                                    button {
+                                        class: "text-sm text-blue-600 hover:text-blue-700 underline cursor-pointer",
+                                        onclick: move |_| {
+                                            group_avatar.set("".to_string());
+                                            avatar_file_input_key.set(avatar_file_input_key() + 1);
+                                        },
+                                        "清空已选头像"
+                                    }
+                                }
+                            }
+                        }
+                        if !error_text().is_empty() {
+                            div { class: "text-red-400 text-sm", "{error_text}" }
+                        }
+                    }
+
+                    h2 { class: "text-2xl font-bold text-black", "群组人员设置" }
+
                     div { class: "p-4 max-h-[60vh] overflow-y-auto custom-scrollbar",
                         div { class: "grid grid-cols-1 gap-2",
-                            for op in operators {
+                            for op in operators.iter() {
                                 {
                                     let op_id = op.id.clone();
                                     let op_name = op.name.clone();
@@ -863,7 +949,7 @@ pub fn SetGroupOpsListModal(
                                     let op_id_for_click = op_id.clone();
                                     rsx! {
                                         div {
-                                            class: "flex items-center gap-3 p-3 rounded hover:bg-black/20 transition-colors text-left group",
+                                            class: "flex items-center gap-3 p-3 rounded hover:bg-black/20 transition-colors text-left group cursor-pointer",
                                             onclick: move |_| {
                                                 group_ops_list
                                                     .with_mut(|list| {
@@ -876,7 +962,7 @@ pub fn SetGroupOpsListModal(
                                             },
                                             input {
                                                 r#type: "checkbox",
-                                                class: "w-4 h-4 accent-blue-600",
+                                                class: "w-4 h-4 accent-blue-600 cursor-pointer",
                                                 checked: group_ops_list().contains(&op_id),
                                             }
                                             div { class: "w-10 h-10 rounded bg-gray-600 flex items-center justify-center overflow-hidden border border-gray-500 group-hover:border-blue-500",

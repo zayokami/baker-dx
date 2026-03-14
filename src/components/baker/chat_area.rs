@@ -1,7 +1,7 @@
 use crate::components::baker::input_bar::InputBar;
 use crate::components::baker::modals::{
-    EditMessageModal, InsertMessageModal, OpsSelection, PickSenderModal, ReactionModal,
-    SetGroupOpsListModal,
+    EditGroupChatProps, EditMessageModal, InsertMessageModal, OpsSelection, PickSenderModal,
+    ReactionModal,
 };
 use crate::components::baker::models::{
     ChatHeadStyle, Contact, Message, MessageKind, Operator, UserProfile,
@@ -51,6 +51,7 @@ pub fn ChatArea(
     on_send_other_message: EventHandler<(String, String)>,
     on_send_status: EventHandler<String>,
     on_send_image: EventHandler<String>,
+    on_send_image_other: EventHandler<(String, String)>,
     on_send_sticker: EventHandler<String>,
     on_send_sticker_other: EventHandler<(String, String)>,
     stickers: ReadSignal<Vec<String>>,
@@ -61,6 +62,8 @@ pub fn ChatArea(
     on_delete_reaction: EventHandler<String>,
     on_insert_message: EventHandler<(String, String, Option<String>)>,
     on_start_replay: EventHandler<String>,
+    is_replaying: bool,
+    on_exit_replay: EventHandler<()>,
     on_update_chat_head_style: EventHandler<ChatHeadStyle>,
     on_clear_messages: EventHandler<()>,
     on_clear_chat: EventHandler<()>,
@@ -74,6 +77,7 @@ pub fn ChatArea(
     let mut header_menu_open = use_signal(|| false);
     let mut show_pick_sender = use_signal(|| false);
     let mut pick_sender_text = use_signal(|| "".to_string());
+    let mut pick_sender_image = use_signal(|| Option::<String>::None);
     let mut pick_sender_sticker = use_signal(|| Option::<String>::None);
     let mut clear_input_token = use_signal(|| 0usize);
     let mut sticker_menu_state = use_signal(|| Option::<(i32, i32)>::None);
@@ -178,6 +182,9 @@ pub fn ChatArea(
         .iter()
         .filter_map(|id| operators_list.iter().find(|op| op.id == *id).cloned())
         .collect::<Vec<_>>();
+    let contact_is_group = contact.is_group;
+    let contact_id_for_other_text = contact.id.clone();
+    let contact_id_for_other_image = contact.id.clone();
     let context_menu_value = context_menu();
     let context_menu_view = context_menu_value.as_ref().map(|(x, y, msg_id)| {
         let show_reaction = messages_list
@@ -270,6 +277,11 @@ pub fn ChatArea(
             id: String,
             content: String,
         },
+        TopicEnded {
+            id: String,
+            content: String,
+            animate: bool,
+        },
         Message {
             msg: Message,
             is_self: bool,
@@ -289,6 +301,14 @@ pub fn ChatArea(
             message_rows.push(ChatRow::Status {
                 id: msg.id.clone(),
                 content: msg.content.clone(),
+            });
+            continue;
+        }
+        if matches!(msg.kind, MessageKind::TopicEnded) {
+            message_rows.push(ChatRow::TopicEnded {
+                id: msg.id.clone(),
+                content: msg.content.clone(),
+                animate: msg.animate,
             });
             continue;
         }
@@ -389,11 +409,22 @@ pub fn ChatArea(
             if show_pick_sender() {
                 PickSenderModal {
                     members: selectable_members.clone(),
-                    on_close: move |_| show_pick_sender.set(false),
+                    on_close: move |_| {
+                        pick_sender_text.set("".to_string());
+                        pick_sender_image.set(None);
+                        pick_sender_sticker.set(None);
+                        show_pick_sender.set(false);
+                    },
                     on_send: move |sender_id| {
                         if let Some(sticker) = pick_sender_sticker() {
                             on_send_sticker_other.call((sender_id, sticker));
                             pick_sender_sticker.set(None);
+                            show_pick_sender.set(false);
+                            return;
+                        }
+                        if let Some(image_data_url) = pick_sender_image() {
+                            on_send_image_other.call((sender_id, image_data_url));
+                            pick_sender_image.set(None);
                             show_pick_sender.set(false);
                             return;
                         }
@@ -408,13 +439,13 @@ pub fn ChatArea(
                 }
             }
             if show_set_group_ops_list() {
-                SetGroupOpsListModal {
+                EditGroupChatProps {
                     on_close: move |_| show_set_group_ops_list.set(false),
                     on_select: move |ops_selection| {
                         on_set_group_ops_list.call(ops_selection);
                         show_set_group_ops_list.set(false);
                     },
-                    selected_contact_id: Some(contact.id.clone()),
+                    selected_contact_id: contact.id.clone(),
                 }
             }
 
@@ -519,6 +550,16 @@ pub fn ChatArea(
                                     },
                                     "导出会话到图片"
                                 }
+                                if is_replaying {
+                                    div {
+                                        class: "px-4 py-2 hover:bg-[#3a3a3a] cursor-pointer text-white text-sm transition-colors",
+                                        onclick: move |_| {
+                                            on_exit_replay.call(());
+                                            header_menu_open.set(false);
+                                        },
+                                        "退出回放"
+                                    }
+                                }
                                 {
                                     if contact.is_group {
                                         rsx! {
@@ -528,7 +569,7 @@ pub fn ChatArea(
                                                     show_set_group_ops_list.set(true);
                                                     header_menu_open.set(false);
                                                 },
-                                                "更改群组干员名单……"
+                                                "群组设置……"
                                             }
                                         }
                                     } else {
@@ -596,7 +637,7 @@ pub fn ChatArea(
                         match row {
                             ChatRow::Status { id, content } => rsx! {
                                 div {
-                                    class: "text-center text-gray-500 text-xs my-2 font-mono cursor-context-menu",
+                                    class: "text-center text-gray-500 text-xs my-2 cursor-context-menu",
                                     key: "{id}",
                                     oncontextmenu: move |evt| {
                                         evt.prevent_default();
@@ -610,6 +651,11 @@ pub fn ChatArea(
                                             );
                                     },
                                     "{content}"
+                                }
+                            },
+                            ChatRow::TopicEnded { id, content, animate } => rsx! {
+                                div { class: "my-6", key: "{id}",
+                                    ReplayFinishedLine { content, animate }
                                 }
                             },
                             ChatRow::Message {
@@ -661,17 +707,29 @@ pub fn ChatArea(
                         InputBar {
                             on_send: move |text| on_send_message.call(text),
                             on_send_other: move |text| {
-                                if contact.is_group {
+                                if contact_is_group {
                                     pick_sender_text.set(text);
                                     show_pick_sender.set(true);
                                 } else {
-                                    on_send_other_message.call((contact.id.clone(), text));
+                                    on_send_other_message.call((contact_id_for_other_text.clone(), text));
                                     clear_input_token.set(clear_input_token() + 1);
                                 }
                             },
-                            is_group: contact.is_group,
+                            is_group: contact_is_group,
                             on_send_status: move |text| on_send_status.call(text),
-                            on_send_image: move |data_url| on_send_image.call(data_url),
+                            on_send_image: move |(data_url, is_ctrl)| {
+                                if is_ctrl {
+                                    if contact_is_group {
+                                        pick_sender_image.set(Some(data_url));
+                                        show_pick_sender.set(true);
+                                    } else {
+                                        on_send_image_other
+                                            .call((contact_id_for_other_image.clone(), data_url));
+                                    }
+                                } else {
+                                    on_send_image.call(data_url);
+                                }
+                            },
                             on_send_sticker: move |(sticker_src, is_ctrl)| {
                                 if is_ctrl {
                                     pick_sender_sticker.set(Some(sticker_src));
@@ -690,6 +748,45 @@ pub fn ChatArea(
                     }
                 }
             }
+        }
+    }
+}
+
+#[component]
+fn ReplayFinishedLine(content: String, animate: bool) -> Element {
+    let left_line_style = if animate {
+        "transform: scaleX(0); transform-origin: left center; animation: replayFinishedLineGrow 0.1s ease-out forwards;"
+    } else {
+        "transform: scaleX(1); transform-origin: left center;"
+    };
+    let right_line_style = if animate {
+        "transform: scaleX(0); transform-origin: right center; animation: replayFinishedLineGrow 0.1s ease-out forwards;"
+    } else {
+        "transform: scaleX(1); transform-origin: right center;"
+    };
+    let text_style = if animate {
+        "opacity: 0; animation: replayFinishedTextFadeIn 0.12s ease-out 0.17s forwards;"
+    } else {
+        "opacity: 1;"
+    };
+
+    rsx! {
+        div { class: "w-full grid grid-cols-[8px_1fr_auto_1fr_8px] items-center select-none",
+            div {}
+            div {
+                class: "flex-1 h-[2px] bg-[rgb(145,145,145)]",
+                style: "{left_line_style}",
+            }
+            span {
+                class: "px-2 text-[rgb(145,145,145)] text-xs font-bold tracking-wide whitespace-nowrap",
+                style: "{text_style}",
+                "{content}"
+            }
+            div {
+                class: "flex-1 h-[2px] bg-[rgb(145,145,145)]",
+                style: "{right_line_style}",
+            }
+            div {}
         }
     }
 }
@@ -827,7 +924,7 @@ fn MessageBubble(
             }
             div { class: "relative w-full min-w-0 {row_align_class}",
                 if show_avatar {
-                    div { class: "w-14 h-14 bg-gray-600 border border-gray-500 shrink-0 flex items-center justify-center text-xs text-gray-300 rounded-sm overflow-hidden {avatar_slot_class}",
+                    div { class: "w-14 h-14 bg-gray-600 border border-gray-500 shrink-0 flex items-center justify-center text-xs text-gray-300 rounded-full overflow-hidden {avatar_slot_class}",
                         if is_self {
                             if !user_profile.avatar_url.is_empty() {
                                 img {

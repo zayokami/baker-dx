@@ -27,6 +27,7 @@ pub enum MessageKind {
     #[default]
     Normal,
     Status,
+    TopicEnded,
     Image,
     Sticker,
 }

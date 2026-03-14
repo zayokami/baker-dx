@@ -15,6 +15,8 @@ const MAIN_CSS: Asset = asset!("/assets/styling/main.css");
 const MODAL_CSS: Asset = asset!("/assets/styling/modal.css");
 const TAILWIND_CSS: Asset = asset!("/assets/tailwind.css");
 
+const FONT: Asset = asset!("/assets/SourceHanSansSC-Regular.otf");
+
 fn main() {
     #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
     {
@@ -50,6 +52,17 @@ fn App() -> Element {
         save_state(&app_state.read());
     });
 
+    let font_face = format!(
+        r#"
+        @font-face {{
+            font-family: 'Source Han Sans SC';
+            src: url('/assets/{}') format('opentype');
+            font-weight: normal;
+            font-style: normal;
+        }}"#,
+        FONT.bundled().bundled_path()
+    );
+
     // The `rsx!` macro lets us define HTML inside of rust. It expands to an Element with all of our HTML inside.
     rsx! {
         // In addition to element and text (which we will see later), rsx can contain other components. In this case,
@@ -59,6 +72,7 @@ fn App() -> Element {
         document::Link { rel: "stylesheet", href: TAILWIND_CSS }
         document::Link { rel: "stylesheet", href: MODAL_CSS }
         document::Script { src: "https://unpkg.com/@zumer/snapdom/dist/snapdom.js" }
+        document::Style { {font_face} }
         document::Title { "Baker" }
 
         // The router component renders the route enum we defined above. It will handle synchronization of the URL and render

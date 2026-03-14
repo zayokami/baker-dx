@@ -91,15 +91,23 @@ fn schedule_animate_off_in_state(
     });
 }
 
-fn schedule_animate_off_in_list(mut list: Signal<Vec<Message>>, msg_id: String) {
+fn schedule_animate_off_in_list_with_delay(
+    mut list: Signal<Vec<Message>>,
+    msg_id: String,
+    delay_ms: u64,
+) {
     spawn(async move {
-        sleep_ms(220).await;
+        sleep_ms(delay_ms).await;
         list.with_mut(|msgs| {
             if let Some(msg) = msgs.iter_mut().find(|m| m.id == msg_id) {
                 msg.animate = false;
             }
         });
     });
+}
+
+fn schedule_animate_off_in_list(list: Signal<Vec<Message>>, msg_id: String) {
+    schedule_animate_off_in_list_with_delay(list, msg_id, 220);
 }
 
 fn schedule_reaction_animate_off_in_state(
@@ -277,6 +285,9 @@ pub fn BakerLayout() -> Element {
     let handle_send_image = move |data_url: String| {
         let user_id = app_state.read().user_profile.id.clone();
         add_message(user_id, data_url, MessageKind::Image);
+    };
+    let mut handle_send_image_other = move |sender_id: String, data_url: String| {
+        add_message(sender_id, data_url, MessageKind::Image);
     };
 
     let handle_send_sticker = move |sticker_src: String| {
@@ -581,6 +592,8 @@ pub fn BakerLayout() -> Element {
                 let contact = contact.unwrap();
 
                 contact.participant_ids = ops_selection.ops;
+                contact.name = ops_selection.name;
+                contact.avatar_url = ops_selection.avatar_url;
             }
         }
     };
@@ -746,6 +759,26 @@ pub fn BakerLayout() -> Element {
                             schedule_reaction_animate_off_in_list(replay_messages_async, msg_id);
                         }
                     }
+                }
+                if replay_token_async() == token {
+                    let topic_end_id = Uuid::new_v4().to_string();
+                    replay_messages_async.with_mut(|list| {
+                        list.push(Message {
+                            id: topic_end_id.clone(),
+                            sender_id: user_id.clone(),
+                            content: "话题结束，暂无新话题".to_string(),
+                            kind: MessageKind::TopicEnded,
+                            animate: true,
+                            animate_reactions: false,
+                            reactions: Vec::new(),
+                        });
+                    });
+                    need_to_scroll_down.set(true);
+                    schedule_animate_off_in_list_with_delay(
+                        replay_messages_async,
+                        topic_end_id,
+                        900,
+                    );
                 }
                 replay_pending_async.set(None);
             });
@@ -918,9 +951,10 @@ pub fn BakerLayout() -> Element {
                                     None
                                 }
                             });
-                        let force_first_avatar = replay_active()
+                        let is_replaying = replay_active()
                             .map(|replay| replay.contact_id == contact.id)
                             .unwrap_or(false);
+                        let force_first_avatar = is_replaying;
                         rsx! {
                             ChatArea {
                                 contact,
@@ -938,6 +972,9 @@ pub fn BakerLayout() -> Element {
                                 },
                                 on_send_status: handle_send_status,
                                 on_send_image: handle_send_image,
+                                on_send_image_other: move |(sender_id, data_url)| {
+                                    handle_send_image_other(sender_id, data_url);
+                                },
                                 on_send_sticker: handle_send_sticker,
                                 on_send_sticker_other: move |(sender_id, sticker)| {
                                     handle_send_sticker_other(sender_id, sticker);
@@ -950,6 +987,8 @@ pub fn BakerLayout() -> Element {
                                 on_delete_reaction: delete_reaction,
                                 on_insert_message: insert_message,
                                 on_start_replay: move |msg_id| replay_request_msg_id.set(Some(msg_id)),
+                                is_replaying,
+                                on_exit_replay: move |_| cancel_replay(),
                                 on_update_chat_head_style: update_chat_head_style,
                                 on_clear_messages: move |_| clear_messages(),
                                 on_clear_chat: move |_| clear_chat(),
