@@ -82,6 +82,9 @@ pub(super) fn CapturePage(contact_id: String) -> Element {
             on_clear_messages: move |_| {},
             on_clear_chat: move |_| {},
             on_set_group_ops_list: move |_| {},
+            on_send_image_other: move |_| {},
+            is_replaying: false,
+            on_exit_replay: move |_| {},
         }
     };
 
