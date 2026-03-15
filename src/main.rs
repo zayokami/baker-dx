@@ -49,7 +49,21 @@ fn App() -> Element {
     let app_state = use_signal(load_state);
     use_context_provider(|| app_state);
     use_effect(move || {
-        save_state(&app_state.read());
+        if let Err(e) = save_state(&app_state.read()) {
+            #[cfg(target_arch = "wasm32")]
+            {
+                spawn(async move {
+                    let _ =
+                        document::eval(&format!("console.error(\"failed to save state: {}\")", e))
+                            .await;
+                });
+            }
+
+            #[cfg(not(target_arch = "wasm32"))]
+            {
+                error!("failed to save state: {}", e);
+            }
+        }
     });
 
     let font_face = format!(

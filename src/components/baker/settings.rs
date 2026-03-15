@@ -1,8 +1,6 @@
 use crate::components::baker::layout::load_repo_config;
 use crate::components::baker::models::{BackgroundMode, Operator};
-use crate::components::baker::{
-    avif_data_url_from_bytes, data_url_from_bytes, mime_from_filename, Route,
-};
+use crate::components::baker::{data_url_from_bytes, mime_from_filename, Route};
 use crate::dioxus_elements::FileData;
 use dioxus::prelude::*;
 use uuid::Uuid;
@@ -197,8 +195,7 @@ pub fn SettingsPage() -> Element {
                                                 spawn(async move {
                                                     if let Ok(bytes) = file.read_bytes().await {
                                                         let bytes_vec = bytes.to_vec();
-                                                        let data_url = avif_data_url_from_bytes(bytes_vec.clone())
-                                                            .unwrap_or_else(|| data_url_from_bytes(&mime, bytes_vec));
+                                                        let data_url = data_url_from_bytes(&mime, bytes_vec);
                                                         preview.set(data_url);
                                                     }
                                                 });
@@ -253,8 +250,7 @@ pub fn SettingsPage() -> Element {
                                                                 spawn(async move {
                                                                     if let Ok(bytes) = file.read_bytes().await {
                                                                         let bytes_vec = bytes.to_vec();
-                                                                        let data_url = avif_data_url_from_bytes(bytes_vec.clone())
-                                                                            .unwrap_or_else(|| data_url_from_bytes(&mime, bytes_vec));
+                                                                        let data_url = data_url_from_bytes(&mime, bytes_vec);
                                                                         preview.set(data_url);
                                                                     }
                                                                 });
@@ -364,8 +360,7 @@ pub fn SettingsPage() -> Element {
                                                     spawn(async move {
                                                         if let Ok(bytes) = file.read_bytes().await {
                                                             let bytes_vec = bytes.to_vec();
-                                                            let data_url = avif_data_url_from_bytes(bytes_vec.clone())
-                                                                .unwrap_or_else(|| data_url_from_bytes(&mime, bytes_vec));
+                                                            let data_url = data_url_from_bytes(&mime, bytes_vec);
                                                             let mut settings = bg.write();
                                                             settings.custom_image = data_url;
                                                             settings.mode = BackgroundMode::CustomImage;

@@ -1,8 +1,8 @@
 use crate::components::baker::capture::CapturePage;
 use crate::components::baker::chat_area::{ChatArea, PendingTyping, ReplayTypingPhase};
 use crate::components::baker::modals::{
-    NewChatModal, NewChatSelection, OpsSelection, ProfileModal, ReplayIntervalMode, ReplaySettings,
-    ReplaySettingsModal, TutorialModal, UpdateAvailableModal,
+    Modal, NewChatModal, NewChatSelection, OpsSelection, ProfileModal, ReplayIntervalMode,
+    ReplaySettings, ReplaySettingsModal, TutorialModal, UpdateAvailableModal,
 };
 use crate::components::baker::models::{
     BackgroundMode, ChatHeadStyle, Contact, Message, MessageKind, MessageReaction,
@@ -200,6 +200,15 @@ pub fn BakerLayout() -> Element {
     let mut replay_pending = use_signal(|| Option::<PendingTyping>::None);
     let mut update_info = use_signal(|| Option::<UpdateInfo>::None);
     let mut update_checked = use_signal(|| false);
+
+    let mut show_tip_saving_image_problem_on_web = app_state.read();
+
+    let on_confirm_tip_saving_image_problem_on_web = {
+        let mut app_state = use_context::<Signal<crate::components::baker::models::AppState>>();
+        move |_| {
+            app_state.write().show_tip_saving_image_problem_on_web = true;
+        }
+    };
 
     let navigator = use_navigator();
 
@@ -879,6 +888,31 @@ pub fn BakerLayout() -> Element {
                             open_url(url).await;
                         });
                     },
+                }
+            }
+
+            if !app_state.read().show_tip_saving_image_problem_on_web {
+                Modal {
+                    title: "提醒",
+                    content_confirmation_button: "了解",
+                    on_close: on_confirm_tip_saving_image_problem_on_web,
+                    on_confirm: on_confirm_tip_saving_image_problem_on_web,
+
+                    {
+                        rsx! {
+                            div { class: "text-black",
+                                p { class: "mt-3",
+                                    em { "如果你是桌面端，请忽略下面的消息：" }
+                                }
+                                p { class: "mt-3",
+                                    "由于项目在Web端目前只使用LocalStorage存储状态，故无法存储非常大的数据，典型情况是上传特大分辨率的图像时（如3840×2160），无法成功存储。请等待开发者修复（预计26/3/21左右修复）。"
+                                }
+                                p { class: "mt-3",
+                                    "如果确有必要的，请将图片分辨率/体积尽可能缩小之后再上传。"
+                                }
+                            }
+                        }
+                    }
                 }
             }
 

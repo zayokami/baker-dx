@@ -146,4 +146,6 @@ pub struct AppState {
     pub update_snooze_date: Option<String>,
     #[serde(default)]
     pub hide_tutorial: bool,
+    #[serde(default)]
+    pub show_tip_saving_image_problem_on_web: bool,
 }

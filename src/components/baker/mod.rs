@@ -32,6 +32,8 @@ pub(super) fn data_url_from_bytes(mime: &str, bytes: Vec<u8>) -> String {
     format!("data:{mime};base64,{encoded}")
 }
 
+#[deprecated]
+#[allow(unused)]
 pub(super) fn avif_data_url_from_bytes(bytes: Vec<u8>) -> Option<String> {
     use image::ImageEncoder;
     let image = image::load_from_memory(&bytes).ok()?;

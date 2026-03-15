@@ -1,5 +1,5 @@
 use crate::components::baker::models::Operator;
-use crate::components::baker::{avif_data_url_from_bytes, data_url_from_bytes, mime_from_filename};
+use crate::components::baker::{data_url_from_bytes, mime_from_filename};
 use crate::dioxus_elements::FileData;
 use dioxus::prelude::*;
 
@@ -268,8 +268,7 @@ pub fn ProfileModal(
                                         spawn(async move {
                                             if let Ok(bytes) = file.read_bytes().await {
                                                 let bytes_vec = bytes.to_vec();
-                                                let data_url = avif_data_url_from_bytes(bytes_vec.clone())
-                                                    .unwrap_or_else(|| data_url_from_bytes(&mime, bytes_vec));
+                                                let data_url = data_url_from_bytes(&mime, bytes_vec);
                                                 preview.set(data_url);
                                             }
                                         });
@@ -765,8 +764,7 @@ pub fn NewChatModal(
                                                 spawn(async move {
                                                     if let Ok(bytes) = file.read_bytes().await {
                                                         let bytes_vec = bytes.to_vec();
-                                                        let data_url = avif_data_url_from_bytes(bytes_vec.clone())
-                                                            .unwrap_or_else(|| data_url_from_bytes(&mime, bytes_vec));
+                                                        let data_url = data_url_from_bytes(&mime, bytes_vec);
                                                         preview.set(data_url);
                                                     }
                                                 });
@@ -913,8 +911,7 @@ pub fn EditGroupChatProps(
                                                 spawn(async move {
                                                     if let Ok(bytes) = file.read_bytes().await {
                                                         let bytes_vec = bytes.to_vec();
-                                                        let data_url = avif_data_url_from_bytes(bytes_vec.clone())
-                                                            .unwrap_or_else(|| data_url_from_bytes(&mime, bytes_vec));
+                                                        let data_url = data_url_from_bytes(&mime, bytes_vec);
                                                         preview.set(data_url);
                                                     }
                                                 });

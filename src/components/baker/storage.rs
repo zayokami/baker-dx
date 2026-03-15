@@ -155,6 +155,7 @@ fn migrate_legacy_state(legacy: LegacyAppState) -> AppState {
         background: legacy.background,
         update_snooze_date: None,
         hide_tutorial: false,
+        show_tip_saving_image_problem_on_web: false,
     }
 }
 
@@ -199,16 +200,18 @@ pub fn load_state() -> AppState {
     }
 }
 
-pub fn save_state(state: &AppState) {
+pub fn save_state(state: &AppState) -> anyhow::Result<()> {
     #[cfg(target_arch = "wasm32")]
     {
-        let _ = LocalStorage::set("baker_dx_state", state);
+        LocalStorage::set("baker_dx_state", state)?
     }
 
     #[cfg(not(target_arch = "wasm32"))]
     {
         if let Ok(content) = serde_json::to_string_pretty(state) {
-            let _ = fs::write("baker_dx_state.json", content);
+            fs::write("baker_dx_state.json", content)?
         }
     }
+
+    Ok(())
 }
