@@ -1,4 +1,4 @@
-use crate::components::baker::models::{Contact, Operator};
+use crate::components::baker::storage::v2::{Contact, Operator};
 use dioxus::prelude::*;
 
 const LIST_NEW_SESSION: Asset = asset!("/assets/images/list_new_session.png");

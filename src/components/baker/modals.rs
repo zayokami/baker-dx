@@ -1,10 +1,22 @@
-use crate::components::baker::models::Operator;
-use crate::components::baker::{avif_data_url_from_bytes, data_url_from_bytes, mime_from_filename};
+use crate::components::baker::storage::v2::Operator;
+use crate::components::baker::{data_url_from_bytes, mime_from_filename};
 use crate::dioxus_elements::FileData;
 use dioxus::prelude::*;
 
+///
+/// 弹窗的模板。
+///
+/// # 参数
+///
+/// - title: 弹窗标题。
+/// - content_confirmation_button: “确定”按钮的内容。典型例子就是“确定”。
+/// - children: 弹窗内容。
+/// - on_close: 处理关闭弹窗的事件。
+/// - on_confirm: 处理按下“确定”按钮的事件。本组件在 call 这个事件的时候不会自动 call on_close 事件。
+/// - max_width: （可选）弹窗中内容的最大宽度。
+///
 #[component]
-fn Modal(
+pub(crate) fn Modal(
     title: &'static str,
     content_confirmation_button: &'static str,
     children: Element,
@@ -38,7 +50,7 @@ fn Modal(
                                 {title}
                             }
                             button {
-                                class: "w-7 h-7 rounded flex items-center justify-center text-black hover:bg-black/10 transition-colors",
+                                class: "w-7 h-7 rounded flex items-center justify-center text-black hover:bg-black/10 transition-colors cursor-pointer",
                                 onclick: move |_| on_close.call(()),
                                 "✕"
                             }
@@ -51,12 +63,12 @@ fn Modal(
 
                                 div { class: "flex justify-end gap-3",
                                     button {
-                                        class: "px-4 py-2 text-black hover:text-gray-400 text-sm",
+                                        class: "px-4 py-2 text-black hover:text-gray-400 text-sm cursor-pointer",
                                         onclick: move |_| on_close.call(()),
                                         "取消"
                                     }
                                     button {
-                                        class: "px-4 py-2 bg-[#fdfc00] hover:bg-[#fdfc00]/60 text-black rounded text-sm font-medium",
+                                        class: "px-4 py-2 bg-[#fdfc00] hover:bg-[#fdfc00]/60 text-black rounded text-sm font-medium cursor-pointer",
                                         onclick: move |_| {
                                             on_confirm.call(());
                                         },
@@ -72,20 +84,39 @@ fn Modal(
     }
 }
 
+///
+/// 回放间隔模式。
+///
 #[derive(Clone, PartialEq)]
 pub enum ReplayIntervalMode {
+    /// 固定间隔
     Fixed,
+    /// 按字数：当前消息字数 * 每个字的间隔。请注意，当消息为表情包和图片时仍按照固定间隔处理
     PerChar,
 }
 
+///
+/// 回放设置。
+///
 #[derive(Clone, PartialEq)]
 pub struct ReplaySettings {
+    /// 回放间隔模式
     pub mode: ReplayIntervalMode,
+    /// 当设为固定间隔时的间隔
     pub fixed_ms: u64,
+    /// 当设为按字数时，每个字的间隔
     pub per_char_ms: u64,
+    /// 发送后的间隔
     pub gap_ms: u64,
 }
 
+///
+/// 回放设置的弹窗。
+///
+/// # 参数
+///
+/// - on_start: 处理开始回放的事件。
+///
 #[component]
 pub fn ReplaySettingsModal(
     on_close: EventHandler<()>,
@@ -178,6 +209,11 @@ pub fn ReplaySettingsModal(
     }
 }
 
+///
+/// 个人资料设置的弹窗
+///
+/// TODO: 将其移动进设置页面
+///
 #[component]
 pub fn ProfileModal(
     current_name: String,
@@ -232,8 +268,7 @@ pub fn ProfileModal(
                                         spawn(async move {
                                             if let Ok(bytes) = file.read_bytes().await {
                                                 let bytes_vec = bytes.to_vec();
-                                                let data_url = avif_data_url_from_bytes(bytes_vec.clone())
-                                                    .unwrap_or_else(|| data_url_from_bytes(&mime, bytes_vec));
+                                                let data_url = data_url_from_bytes(&mime, bytes_vec);
                                                 preview.set(data_url);
                                             }
                                         });
@@ -277,6 +312,13 @@ pub fn ProfileModal(
     }
 }
 
+///
+/// 编辑消息的弹窗。
+///
+/// # 参数
+///
+/// - initial_content: 初始内容
+///
 #[component]
 pub fn EditMessageModal(
     initial_content: String,
@@ -307,6 +349,9 @@ pub fn EditMessageModal(
     }
 }
 
+///
+/// 添加反应的弹窗。
+///
 #[component]
 pub fn ReactionModal(on_close: EventHandler<()>, on_save: EventHandler<String>) -> Element {
     let mut reaction = use_signal(|| "".to_string());
@@ -365,6 +410,14 @@ pub fn ReactionModal(on_close: EventHandler<()>, on_save: EventHandler<String>) 
     }
 }
 
+///
+/// 告知用户有可用更新的弹窗。
+///
+/// # 参数
+///
+/// - latest_version: 最新的版本
+/// - release_url: 正式版的 url
+///
 #[component]
 pub fn UpdateAvailableModal(
     latest_version: String,
@@ -404,6 +457,13 @@ pub fn UpdateAvailableModal(
     }
 }
 
+///
+/// 选择发送者的弹窗。
+///
+/// # 参数
+///
+/// - members: 干员列表
+///
 #[component]
 pub fn PickSenderModal(
     members: Vec<Operator>,
@@ -435,7 +495,7 @@ pub fn PickSenderModal(
                                 let is_selected = selected_id() == Some(member_id.clone());
                                 rsx! {
                                     button {
-                                        class: if is_selected { "flex items-center gap-3 p-3 rounded bg-black/10 transition-colors text-left group" } else { "flex items-center gap-3 p-3 rounded hover:bg-black/5 transition-colors text-left group" },
+                                        class: if is_selected { "flex items-center gap-3 p-3 rounded bg-black/10 transition-colors text-left group cursor-pointer" } else { "flex items-center gap-3 p-3 rounded hover:bg-black/5 transition-colors text-left group cursor-pointer" },
                                         onclick: move |_| selected_id.set(Some(member_id.clone())),
                                         div { class: if is_selected { "w-10 h-10 rounded bg-gray-300 flex items-center justify-center overflow-hidden border border-black/40" } else { "w-10 h-10 rounded bg-gray-300 flex items-center justify-center overflow-hidden border border-black/10 group-hover:border-black/30" },
                                             if !member_avatar.is_empty() {
@@ -458,6 +518,13 @@ pub fn PickSenderModal(
     }
 }
 
+///
+/// 在……前插入消息的弹窗。
+///
+/// # 参数
+///
+/// - members: 干员列表
+///
 #[component]
 pub fn InsertMessageModal(
     members: Vec<Operator>,
@@ -528,12 +595,12 @@ pub fn InsertMessageModal(
             div { class: "space-y-4",
                 div { class: "flex gap-2",
                     button {
-                        class: "flex-1 px-3 py-2 rounded text-sm font-medium transition-colors {self_class}",
+                        class: "flex-1 px-3 py-2 rounded text-sm font-medium transition-colors cursor-pointer {self_class}",
                         onclick: move |_| is_self.set(true),
                         "我方"
                     }
                     button {
-                        class: "flex-1 px-3 py-2 rounded text-sm font-medium transition-colors {other_class}",
+                        class: "flex-1 px-3 py-2 rounded text-sm font-medium transition-colors cursor-pointer {other_class}",
                         onclick: move |_| is_self.set(false),
                         "对方"
                     }
@@ -549,16 +616,31 @@ pub fn InsertMessageModal(
     }
 }
 
+///
+/// 新会话的类别
+///
 #[derive(Clone, PartialEq)]
 pub enum NewChatSelection {
+    /// 单人
     Single(Operator),
+    /// 群组
     Group {
+        /// 群组名
         name: String,
+        /// 群组头像 url
         avatar_url: String,
+        /// 群员。不包括自己。
         member_ids: Vec<String>,
     },
 }
 
+///
+/// 发起新会话的弹窗。
+///
+/// # 参数
+///
+/// operators: 干员列表
+///
 #[component]
 pub fn NewChatModal(
     operators: Signal<Vec<Operator>>,
@@ -578,16 +660,15 @@ pub fn NewChatModal(
             on_close,
             on_confirm: move |_| {
                 if selected_count == 1 {
-                    if let Some(op_id) = selected_ids().first().cloned() {
-                        if let Some(op) = operators
+                    if let Some(op_id) = selected_ids().first().cloned()
+                        && let Some(op) = operators
                             .read()
                             .iter()
                             .find(|op| op.id == op_id)
                             .cloned()
-                        {
-                            on_select.call(NewChatSelection::Single(op));
-                            on_close.call(());
-                        }
+                    {
+                        on_select.call(NewChatSelection::Single(op));
+                        on_close.call(());
                     }
                 } else if selected_count > 1 {
                     let name = group_name().trim().to_string();
@@ -622,7 +703,7 @@ pub fn NewChatModal(
                                         let op_id_for_click = op_id.clone();
                                         rsx! {
                                             div {
-                                                class: "flex items-center gap-3 p-3 rounded hover:bg-black/20 transition-colors text-left group",
+                                                class: "flex items-center gap-3 p-3 rounded hover:bg-black/20 transition-colors text-left group cursor-pointer",
                                                 onclick: move |_| {
                                                     error_text.set("".to_string());
                                                     selected_ids
@@ -636,7 +717,7 @@ pub fn NewChatModal(
                                                 },
                                                 input {
                                                     r#type: "checkbox",
-                                                    class: "w-4 h-4 accent-blue-600",
+                                                    class: "w-4 h-4 accent-blue-600 cursor-pointer",
                                                     checked: selected_ids().contains(&op_id),
                                                 }
                                                 div { class: "w-10 h-10 rounded bg-gray-600 flex items-center justify-center overflow-hidden border border-gray-500 group-hover:border-blue-500",
@@ -668,7 +749,7 @@ pub fn NewChatModal(
                                         },
                                     }
                                     input {
-                                        class: "w-full bg-[#e9e9e9] border border-black/10 rounded p-3 text-black text-sm focus:outline-none focus:border-black/30 resize-none",
+                                        class: "w-full bg-[#e9e9e9] border border-black/10 rounded p-3 text-black text-sm focus:outline-none focus:border-black/30 resize-none cursor-pointer",
                                         r#type: "file",
                                         accept: "image/*",
                                         onchange: move |evt| {
@@ -682,8 +763,7 @@ pub fn NewChatModal(
                                                 spawn(async move {
                                                     if let Ok(bytes) = file.read_bytes().await {
                                                         let bytes_vec = bytes.to_vec();
-                                                        let data_url = avif_data_url_from_bytes(bytes_vec.clone())
-                                                            .unwrap_or_else(|| data_url_from_bytes(&mime, bytes_vec));
+                                                        let data_url = data_url_from_bytes(&mime, bytes_vec);
                                                         preview.set(data_url);
                                                     }
                                                 });
@@ -713,30 +793,36 @@ pub fn NewChatModal(
     }
 }
 
+///
+/// 用于 SetGroupOpsListModal 设置的干员列表。
+///
 #[derive(PartialEq, Clone)]
 pub(crate) struct OpsSelection {
     pub ops: Vec<String>,
+    pub name: String,
+    pub avatar_url: String,
 }
 
 ///
-/// 用于设置特定群聊中干员名单的列表弹窗。
+/// 用于设置特定群聊中各项信息的弹窗。
 ///
 #[component]
-pub fn SetGroupOpsListModal(
+pub fn EditGroupChatProps(
     on_close: EventHandler,
     on_select: EventHandler<OpsSelection>,
-    selected_contact_id: Option<String>,
+    selected_contact_id: String,
 ) -> Element {
-    let app_state = use_context::<Signal<crate::components::baker::models::AppState>>();
+    let app_state = use_context::<Signal<crate::components::baker::storage::v2::AppState>>();
 
-    let operators = &app_state.read().operators;
     let app_state_read = app_state.read();
-    let group_ops_list = match selected_contact_id.clone() {
-        Some(id) => app_state_read.contacts.iter().find(|x| x.id == id),
-        None => None,
-    };
+    let operators = app_state_read.operators.clone();
+    let contact = app_state_read
+        .contacts
+        .iter()
+        .find(|x| x.id == selected_contact_id)
+        .cloned();
 
-    if group_ops_list.is_none() {
+    if contact.is_none() {
         return rsx! {
             Modal {
                 title: "错误",
@@ -751,25 +837,107 @@ pub fn SetGroupOpsListModal(
         };
     }
 
-    let mut group_ops_list = use_signal(|| group_ops_list.unwrap().participant_ids.clone());
+    let contact = contact.unwrap();
+    let mut group_ops_list = use_signal(|| contact.participant_ids.clone());
+    let mut group_name = use_signal(|| contact.name.clone());
+    let mut group_avatar = use_signal(|| contact.avatar_url.clone());
+    let mut avatar_file_input_key = use_signal(|| 0usize);
+    let mut error_text = use_signal(|| "".to_string());
 
     rsx! {
         Modal {
-            title: "设置群组干员列表",
-            content_confirmation_button: "确定",
+            title: "群组设置",
+            content_confirmation_button: "好",
             on_close,
             on_confirm: move |_| {
+                let name = group_name().trim().to_string();
+                if name.is_empty() {
+                    error_text.set("请输入群组名称".to_string());
+                    return;
+                }
                 on_select
                     .call(OpsSelection {
                         ops: group_ops_list(),
+                        name,
+                        avatar_url: group_avatar(),
                     })
             },
 
             {
                 rsx! {
+                    div { class: "space-y-4",
+                        div {
+                            label { class: "block text-black text-sm mb-1", "群组名称" }
+                            input {
+                                class: "w-full bg-[#e9e9e9] border border-black/10 rounded p-3 text-black text-sm focus:outline-none focus:border-black/30 resize-none",
+                                placeholder: "请输入群组名称",
+                                value: "{group_name}",
+                                oninput: move |e| {
+                                    group_name.set(e.value());
+                                    error_text.set("".to_string());
+                                },
+                            }
+                        }
+                        div {
+                            label { class: "block text-black text-sm mb-1", "群组头像" }
+                            div { class: "flex items-center gap-3",
+                                div { class: "w-14 h-14 rounded bg-gray-600 flex items-center justify-center overflow-hidden border border-gray-500 shrink-0",
+                                    if !group_avatar().is_empty() {
+                                        img {
+                                            src: "{group_avatar}",
+                                            class: "w-full h-full object-cover",
+                                        }
+                                    } else {
+                                        span { class: "text-white font-bold text-lg",
+                                            "{group_name.read().chars().next().unwrap_or('?')}"
+                                        }
+                                    }
+                                }
+                                div { class: "flex-1 space-y-1",
+                                    input {
+                                        key: "{avatar_file_input_key}",
+                                        class: "w-full bg-[#e9e9e9] border border-black/10 rounded p-3 text-black text-sm focus:outline-none focus:border-black/30 resize-none cursor-pointer",
+                                        r#type: "file",
+                                        accept: "image/*",
+                                        onchange: move |evt| {
+                                            let files: Vec<FileData> = evt.files();
+                                            if let Some(file) = files.first().cloned() {
+                                                let file_name: String = file.name();
+                                                let mime = file
+                                                    .content_type()
+                                                    .unwrap_or_else(|| mime_from_filename(&file_name).to_string());
+                                                let mut preview = group_avatar;
+                                                spawn(async move {
+                                                    if let Ok(bytes) = file.read_bytes().await {
+                                                        let bytes_vec = bytes.to_vec();
+                                                        let data_url = data_url_from_bytes(&mime, bytes_vec);
+                                                        preview.set(data_url);
+                                                    }
+                                                });
+                                            }
+                                        },
+                                    }
+                                    button {
+                                        class: "text-sm text-blue-600 hover:text-blue-700 underline cursor-pointer",
+                                        onclick: move |_| {
+                                            group_avatar.set("".to_string());
+                                            avatar_file_input_key.set(avatar_file_input_key() + 1);
+                                        },
+                                        "清空已选头像"
+                                    }
+                                }
+                            }
+                        }
+                        if !error_text().is_empty() {
+                            div { class: "text-red-400 text-sm", "{error_text}" }
+                        }
+                    }
+
+                    h2 { class: "text-2xl font-bold text-black", "群组人员设置" }
+
                     div { class: "p-4 max-h-[60vh] overflow-y-auto custom-scrollbar",
                         div { class: "grid grid-cols-1 gap-2",
-                            for op in operators {
+                            for op in operators.iter() {
                                 {
                                     let op_id = op.id.clone();
                                     let op_name = op.name.clone();
@@ -777,7 +945,7 @@ pub fn SetGroupOpsListModal(
                                     let op_id_for_click = op_id.clone();
                                     rsx! {
                                         div {
-                                            class: "flex items-center gap-3 p-3 rounded hover:bg-black/20 transition-colors text-left group",
+                                            class: "flex items-center gap-3 p-3 rounded hover:bg-black/20 transition-colors text-left group cursor-pointer",
                                             onclick: move |_| {
                                                 group_ops_list
                                                     .with_mut(|list| {
@@ -790,7 +958,7 @@ pub fn SetGroupOpsListModal(
                                             },
                                             input {
                                                 r#type: "checkbox",
-                                                class: "w-4 h-4 accent-blue-600",
+                                                class: "w-4 h-4 accent-blue-600 cursor-pointer",
                                                 checked: group_ops_list().contains(&op_id),
                                             }
                                             div { class: "w-10 h-10 rounded bg-gray-600 flex items-center justify-center overflow-hidden border border-gray-500 group-hover:border-blue-500",
@@ -819,6 +987,9 @@ const IMAGE_TUTORIAL_3: Asset = asset!("/tutorial/3.png");
 const IMAGE_TUTORIAL_4: Asset = asset!("/tutorial/4.png");
 const IMAGE_TUTORIAL_5: Asset = asset!("/tutorial/5.png");
 
+///
+/// 教程弹窗。
+///
 #[component]
 pub fn TutorialModal(on_close: EventHandler<()>, on_confirm: EventHandler<bool>) -> Element {
     let mut dont_show_again = use_signal(|| false);
@@ -868,6 +1039,9 @@ pub fn TutorialModal(on_close: EventHandler<()>, on_confirm: EventHandler<bool>)
                                 ul { class: "ml-10", style: "list-style: square inside",
                                     li { "为对方发送：将输入框中的内容以对方的身份发送。" }
                                     li {
+                                        em { "（表情包和图片使用 Ctrl + 左键可以为对方发送）" }
+                                    }
+                                    li {
                                         "发送为状态：将输入框中的内容以状态行的形式发送。"
                                         ul { class: "ml-10", style: "list-style: inside",
                                             li {
@@ -905,7 +1079,7 @@ pub fn TutorialModal(on_close: EventHandler<()>, on_confirm: EventHandler<bool>)
                             "推荐设置为：\r\n    固定间隔 400ms + 发送后间隔 1000ms，这样子可能大差不差。\r\n    点击开始回放就好了。"
                         }
                         p {
-                            "（回放完之后发送消息（或者历史消息）看不到？切换其他的会话再回来就行了。）"
+                            "（回放完之后发送消息（或者历史消息）看不到？右上角更多按钮的菜单可以结束回放。）"
                         }
                         hr {}
                         p {
