@@ -606,13 +606,11 @@ fn default_loaded_state() -> LoadedState {
 }
 
 fn image_bytes_for_hash(data_url: &str) -> Vec<u8> {
-    if let Some((meta, payload)) = data_url.split_once(',') {
-        if meta.contains(";base64") {
-            if let Ok(bytes) = base64::engine::general_purpose::STANDARD.decode(payload.trim()) {
+    if let Some((meta, payload)) = data_url.split_once(',')
+        && meta.contains(";base64")
+            && let Ok(bytes) = base64::engine::general_purpose::STANDARD.decode(payload.trim()) {
                 return bytes;
             }
-        }
-    }
 
     data_url.as_bytes().to_vec()
 }
@@ -978,15 +976,14 @@ fn try_load_legacy_from_desktop_file() -> Option<LegacyAppState> {
 }
 
 pub async fn load_state() -> LoadedState {
-    if let Ok(Some((meta, snapshot))) = load_v2_snapshot_from_web_storage().await {
-        if let Some(state) = decode_state(meta.clone(), snapshot) {
+    if let Ok(Some((meta, snapshot))) = load_v2_snapshot_from_web_storage().await
+        && let Some(state) = decode_state(meta.clone(), snapshot) {
             return LoadedState {
                 state,
                 revision: meta.revision,
                 skip_initial_save: true,
             };
         }
-    }
 
     if let Ok(Some(v1_state)) = try_load_v1_from_web_storage().await {
         return LoadedState {

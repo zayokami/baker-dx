@@ -660,8 +660,8 @@ pub fn NewChatModal(
             on_close,
             on_confirm: move |_| {
                 if selected_count == 1 {
-                    if let Some(op_id) = selected_ids().first().cloned() {
-                        if let Some(op) = operators
+                    if let Some(op_id) = selected_ids().first().cloned()
+                        && let Some(op) = operators
                             .read()
                             .iter()
                             .find(|op| op.id == op_id)
@@ -670,7 +670,6 @@ pub fn NewChatModal(
                             on_select.call(NewChatSelection::Single(op));
                             on_close.call(());
                         }
-                    }
                 } else if selected_count > 1 {
                     let name = group_name().trim().to_string();
                     if name.is_empty() {

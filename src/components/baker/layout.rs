@@ -1,7 +1,7 @@
 use crate::components::baker::capture::CapturePage;
 use crate::components::baker::chat_area::{ChatArea, PendingTyping, ReplayTypingPhase};
 use crate::components::baker::modals::{
-    Modal, NewChatModal, NewChatSelection, OpsSelection, ProfileModal, ReplayIntervalMode,
+    NewChatModal, NewChatSelection, OpsSelection, ProfileModal, ReplayIntervalMode,
     ReplaySettings, ReplaySettingsModal, TutorialModal, UpdateAvailableModal,
 };
 use crate::components::baker::settings::SettingsPage;
@@ -83,11 +83,10 @@ fn schedule_animate_off_in_state(
 ) {
     spawn(async move {
         sleep_ms(220).await;
-        if let Some(msgs) = app_state.write().messages.get_mut(&contact_id) {
-            if let Some(msg) = msgs.iter_mut().find(|m| m.id == msg_id) {
+        if let Some(msgs) = app_state.write().messages.get_mut(&contact_id)
+            && let Some(msg) = msgs.iter_mut().find(|m| m.id == msg_id) {
                 msg.animate = false;
             }
-        }
     });
 }
 
@@ -117,11 +116,10 @@ fn schedule_reaction_animate_off_in_state(
 ) {
     spawn(async move {
         sleep_ms(220).await;
-        if let Some(msgs) = app_state.write().messages.get_mut(&contact_id) {
-            if let Some(msg) = msgs.iter_mut().find(|m| m.id == msg_id) {
+        if let Some(msgs) = app_state.write().messages.get_mut(&contact_id)
+            && let Some(msg) = msgs.iter_mut().find(|m| m.id == msg_id) {
                 msg.animate_reactions = false;
             }
-        }
     });
 }
 
@@ -200,14 +198,6 @@ pub fn BakerLayout() -> Element {
     let mut replay_pending = use_signal(|| Option::<PendingTyping>::None);
     let mut update_info = use_signal(|| Option::<UpdateInfo>::None);
     let mut update_checked = use_signal(|| false);
-
-    let on_confirm_tip_saving_image_problem_on_web = {
-        let mut app_state =
-            use_context::<Signal<crate::components::baker::storage::v2::AppState>>();
-        move |_| {
-            app_state.write().show_tip_saving_image_problem_on_web = true;
-        }
-    };
 
     let navigator = use_navigator();
 
@@ -340,11 +330,10 @@ pub fn BakerLayout() -> Element {
     // Derived signals for ChatArea
     let messages = use_memo(move || {
         if let Some(id) = selected_contact_id() {
-            if let Some(replay) = replay_active() {
-                if replay.contact_id == id {
+            if let Some(replay) = replay_active()
+                && replay.contact_id == id {
                     return replay_messages();
                 }
-            }
             app_state
                 .read()
                 .messages
@@ -447,11 +436,10 @@ pub fn BakerLayout() -> Element {
     let edit_message = move |(msg_id, new_content): (String, String)| {
         if let Some(contact_id) = selected_contact_id() {
             let mut state = app_state.write();
-            if let Some(msgs) = state.messages.get_mut(&contact_id) {
-                if let Some(msg) = msgs.iter_mut().find(|m| m.id == msg_id) {
+            if let Some(msgs) = state.messages.get_mut(&contact_id)
+                && let Some(msg) = msgs.iter_mut().find(|m| m.id == msg_id) {
                     msg.content = new_content;
                 }
-            }
         }
     };
 
@@ -466,8 +454,8 @@ pub fn BakerLayout() -> Element {
             let msg_id_value = msg_id.clone();
             {
                 let mut state = app_state.write();
-                if let Some(msgs) = state.messages.get_mut(&contact_id) {
-                    if let Some(msg) = msgs.iter_mut().find(|m| m.id == msg_id) {
+                if let Some(msgs) = state.messages.get_mut(&contact_id)
+                    && let Some(msg) = msgs.iter_mut().find(|m| m.id == msg_id) {
                         msg.reactions.push(MessageReaction {
                             content: reaction,
                             sender_id,
@@ -475,7 +463,6 @@ pub fn BakerLayout() -> Element {
                         msg.animate_reactions = true;
                         should_animate = true;
                     }
-                }
             }
             if should_animate {
                 schedule_reaction_animate_off_in_state(app_state, contact_id, msg_id_value);
@@ -487,13 +474,12 @@ pub fn BakerLayout() -> Element {
         if let Some(contact_id) = selected_contact_id() {
             let user_id = app_state.read().user_profile.id.clone();
             let mut state = app_state.write();
-            if let Some(msgs) = state.messages.get_mut(&contact_id) {
-                if let Some(msg) = msgs.iter_mut().find(|m| m.id == msg_id) {
+            if let Some(msgs) = state.messages.get_mut(&contact_id)
+                && let Some(msg) = msgs.iter_mut().find(|m| m.id == msg_id) {
                     // 只删除当前用户的反应，保留其他人的
                     msg.reactions
                         .retain(|reaction| reaction.sender_id != user_id);
                 }
-            }
         }
     };
 
@@ -608,14 +594,13 @@ pub fn BakerLayout() -> Element {
 
     use_effect(move || {
         let current = selected_contact_id();
-        if let Some(replay) = replay_active() {
-            if Some(replay.contact_id) != current {
+        if let Some(replay) = replay_active()
+            && Some(replay.contact_id) != current {
                 replay_token.set(replay_token() + 1);
                 replay_active.set(None);
                 replay_messages.set(Vec::new());
                 replay_pending.set(None);
             }
-        }
     });
 
     let need_to_scroll_down = use_signal(|| false);
@@ -796,13 +781,11 @@ pub fn BakerLayout() -> Element {
     let user_profile = app_state.read().user_profile.clone();
     let hide_tutorial = app_state.read().hide_tutorial;
     let replay_pending_for_contact = use_memo(move || {
-        if let Some(replay) = replay_active() {
-            if let Some(selected_id) = selected_contact_id() {
-                if replay.contact_id == selected_id {
+        if let Some(replay) = replay_active()
+            && let Some(selected_id) = selected_contact_id()
+                && replay.contact_id == selected_id {
                     return replay_pending();
                 }
-            }
-        }
         None
     });
     let background_style = use_memo(move || {
@@ -887,31 +870,6 @@ pub fn BakerLayout() -> Element {
                             open_url(url).await;
                         });
                     },
-                }
-            }
-
-            if !app_state.read().show_tip_saving_image_problem_on_web {
-                Modal {
-                    title: "提醒",
-                    content_confirmation_button: "了解",
-                    on_close: on_confirm_tip_saving_image_problem_on_web,
-                    on_confirm: on_confirm_tip_saving_image_problem_on_web,
-
-                    {
-                        rsx! {
-                            div { class: "text-black",
-                                p { class: "mt-3",
-                                    em { "如果你是桌面端，请忽略下面的消息：" }
-                                }
-                                p { class: "mt-3",
-                                    "由于项目在Web端目前只使用LocalStorage存储状态，故无法存储非常大的数据，典型情况是上传特大分辨率的图像时（如3840×2160），无法成功存储。请等待开发者修复（预计26/3/21左右修复）。"
-                                }
-                                p { class: "mt-3",
-                                    "如果确有必要的，请将图片分辨率/体积尽可能缩小之后再上传。"
-                                }
-                            }
-                        }
-                    }
                 }
             }
 
