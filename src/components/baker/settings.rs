@@ -1,6 +1,6 @@
 use crate::components::baker::layout::load_repo_config;
 use crate::components::baker::storage::v2::{BackgroundMode, Operator};
-use crate::components::baker::{data_url_from_bytes, mime_from_filename, Route};
+use crate::components::baker::{Route, data_url_from_bytes, mime_from_filename};
 use crate::dioxus_elements::FileData;
 use dioxus::prelude::*;
 use uuid::Uuid;

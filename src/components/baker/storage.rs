@@ -1,4 +1,4 @@
-use anyhow::{anyhow, Context};
+use anyhow::{Context, anyhow};
 use base64::Engine;
 use dioxus::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -608,9 +608,10 @@ fn default_loaded_state() -> LoadedState {
 fn image_bytes_for_hash(data_url: &str) -> Vec<u8> {
     if let Some((meta, payload)) = data_url.split_once(',')
         && meta.contains(";base64")
-            && let Ok(bytes) = base64::engine::general_purpose::STANDARD.decode(payload.trim()) {
-                return bytes;
-            }
+        && let Ok(bytes) = base64::engine::general_purpose::STANDARD.decode(payload.trim())
+    {
+        return bytes;
+    }
 
     data_url.as_bytes().to_vec()
 }
@@ -918,8 +919,8 @@ async fn web_storage_get(key: &str) -> anyhow::Result<Option<String>> {
         .ok_or_else(|| anyhow!("localStorage returned a non-string value"))
 }
 
-async fn load_v2_snapshot_from_web_storage(
-) -> anyhow::Result<Option<(PersistedMeta, PersistedDbSnapshot)>> {
+async fn load_v2_snapshot_from_web_storage()
+-> anyhow::Result<Option<(PersistedMeta, PersistedDbSnapshot)>> {
     let Some(meta_raw) = web_storage_get(V2_META_STORAGE_KEY).await? else {
         return Ok(None);
     };
@@ -977,13 +978,14 @@ fn try_load_legacy_from_desktop_file() -> Option<LegacyAppState> {
 
 pub async fn load_state() -> LoadedState {
     if let Ok(Some((meta, snapshot))) = load_v2_snapshot_from_web_storage().await
-        && let Some(state) = decode_state(meta.clone(), snapshot) {
-            return LoadedState {
-                state,
-                revision: meta.revision,
-                skip_initial_save: true,
-            };
-        }
+        && let Some(state) = decode_state(meta.clone(), snapshot)
+    {
+        return LoadedState {
+            state,
+            revision: meta.revision,
+            skip_initial_save: true,
+        };
+    }
 
     if let Ok(Some(v1_state)) = try_load_v1_from_web_storage().await {
         return LoadedState {

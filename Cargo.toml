@@ -5,7 +5,11 @@ authors = ["Wanye_7300 <chensiyuan-2009@outlook.com>"]
 edition = "2024"
 
 [workspace]
-members = ["server"]
+members = ["server", "protocol"]
+resolver = "3"
+
+[workspace.dependencies]
+protocol = { path = "protocol" }
 
 [dependencies]
 chrono = { version = "0.4.43", features = ["serde", "wasmbind"] }
@@ -29,6 +33,7 @@ image = { version = "0.25.5", default-features = false, features = [
 semver = { version = "1.0.27", features = ["serde"] }
 anyhow = "1.0.102"
 sha2 = "0.10.9"
+protocol.workspace = true
 
 [features]
 default = ["desktop"]
