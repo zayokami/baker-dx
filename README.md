@@ -5,12 +5,14 @@
 
 ## 功能概览
 
-- 会话与联系人管理：选择会话、发起新会话、配置干员列表
+- 会话与联系人管理：选择会话、发起单聊或群聊、配置干员列表
 - 消息编辑能力：发送、编辑、删除、在指定位置插入
-- 状态行支持：以独立状态行展示，可编辑、删除、插入
-- 回放能力：从指定消息起开始回放
-- 主题与资料：会话头样式切换、背景模式设置、用户资料配置
-- 本地持久化存储：Web 使用 LocalStorage，非 wasm 目标使用本地 JSON 文件
+- 消息类型支持：普通消息、状态行、图片、贴纸
+- 反应与演出：消息反应、发送动画、回放打字效果
+- 回放能力：从指定消息起开始回放，并在回放结束后显示“话题结束”
+- 导出能力：离屏渲染当前会话并导出截图
+- 个性化设置：会话头样式切换、背景模式设置、用户资料配置、教程开关
+- 本地持久化存储：当前版本使用 LocalStorage + IndexedDB，并兼容旧版 `baker_dx_state.json` 数据迁移
 
 ## TO-DO LIST
 
@@ -23,17 +25,38 @@
 
 ## 使用的技术
 
-- Rust 2021
-- Dioxus 0.7
+- Rust 2024
+- Dioxus 0.7.3
+- 桌面端默认启用，Web 端可选
+- Dioxus Router
+- `reqwest` / `webbrowser` / `image`
 
 ## 运行
 
 ```bash
 cargo install dioxus-cli
-dx serve --platform web
-# ...If you want to run it on desktop platform, you can use the following command:
 dx serve --platform desktop
+dx serve --platform web
 ```
+
+默认特性为 `desktop`。如果你希望只构建 Web，可以按需调整 Cargo feature。
+
+## 存储说明
+
+- 当前状态数据会序列化为 v2 存储结构
+- 元数据使用 LocalStorage 保存
+- 联系人、消息和图片资源使用 IndexedDB 保存
+- 旧版本的本地 JSON 状态文件 `baker_dx_state.json` 仍可作为迁移来源读取
+
+## 项目结构
+
+- `src/main.rs`：应用入口、资源注入、状态加载与保存
+- `src/components/baker/layout.rs`：主页面控制层与路由入口
+- `src/components/baker/chat_area.rs`：聊天区域与消息渲染
+- `src/components/baker/input_bar.rs`：输入栏、图片与贴纸发送
+- `src/components/baker/modals.rs`：各类弹窗
+- `src/components/baker/storage.rs`：状态编码、解码与迁移逻辑
+- `server/`：独立的轻量服务端子工程
 
 ## 问题、建议、Pull Request
 

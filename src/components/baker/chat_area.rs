@@ -804,7 +804,11 @@ fn MessageBubble(
     user_profile: Rc<UserProfile>,
     on_context_menu: EventHandler<MouseEvent>,
 ) -> Element {
-    let align_class = if is_self { "items-end" } else { "items-start" };
+    let root_align_style = if is_self {
+        "align-items: flex-end;"
+    } else {
+        "align-items: flex-start;"
+    };
     let anim_origin = if is_self {
         "transform-origin: calc(100% + 8px) 0;"
     } else {
@@ -876,39 +880,37 @@ fn MessageBubble(
         "opacity: 1;"
     };
 
-    let avatar_slot_class = if is_self {
-        "absolute right-0 top-0"
+    let avatar_slot_style = if is_self {
+        "right: 0; top: 0;"
     } else {
-        "absolute left-0 top-0"
+        "left: 0; top: 0;"
     };
-    let row_align_class = if is_self {
-        "flex justify-end"
+    let row_align_style = if is_self {
+        "justify-content: flex-end;"
     } else {
-        "flex justify-start"
+        "justify-content: flex-start;"
     };
-    let bubble_wrap_class = if is_self {
-        "relative group bubble-wrap mt-1 cursor-context-menu inline-block max-w-[60%] min-w-0 mr-[68px]"
-            .to_string()
+    let bubble_wrap_spacing = if is_self {
+        "margin-right: 68px;"
     } else {
-        "relative group bubble-wrap mt-1 cursor-context-menu inline-block max-w-[60%] min-w-0 ml-[68px]"
-            .to_string()
+        "margin-left: 68px;"
     };
-    let reaction_wrap_class = "mt-2 flex gap-1 items-center flex-wrap";
-    let reaction_align_class = if is_self {
-        "justify-end"
+    let bubble_wrap_style = format!("{bubble_anim_style} {bubble_wrap_spacing}");
+    let reaction_align_style = if is_self {
+        "justify-content: flex-end;"
     } else {
-        "justify-start"
+        "justify-content: flex-start;"
     };
-    let name_wrap_class = if is_self {
-        "w-full flex justify-end pr-[68px]"
+    let name_wrap_style = if is_self {
+        "justify-content: flex-end; padding-right: 68px;"
     } else {
-        "w-full flex justify-start pl-[68px]"
+        "justify-content: flex-start; padding-left: 68px;"
     };
 
     rsx! {
-        div { class: "flex flex-col {align_class} gap-0 w-full max-w-full",
+        div { class: "flex flex-col gap-0 w-full max-w-full", style: "{root_align_style}",
             if show_sender_name {
-                div { class: "{name_wrap_class}",
+                div { class: "w-full flex", style: "{name_wrap_style}",
                     div {
                         class: "text-sm mb-1",
                         style: "color: rgb(167, 167, 167);",
@@ -920,34 +922,36 @@ fn MessageBubble(
                     }
                 }
             }
-            div { class: "relative w-full min-w-0 {row_align_class}",
+            div { class: "relative w-full min-w-0 flex", style: "{row_align_style}",
                 if show_avatar {
-                    div { class: "w-14 h-14 bg-gray-600 border border-gray-500 shrink-0 flex items-center justify-center text-xs text-gray-300 rounded-full overflow-hidden {avatar_slot_class}",
-                        if is_self {
-                            if !user_profile.avatar_url.is_empty() {
+                    div { class: "portrait-frame w-14 h-14 shrink-0", style: "position: absolute; {avatar_slot_style}",
+                        div { class: "portrait-frame__chrome" }
+                        div { class: "portrait-frame__chrome-ring" }
+                        div { class: "portrait-frame__core",
+                            if is_self {
+                                if !user_profile.avatar_url.is_empty() {
+                                    img {
+                                        src: "{user_profile.avatar_url}",
+                                    }
+                                } else {
+                                    div { class: "portrait-frame__fallback text-xs", "Me" }
+                                }
+                            } else if !sender_avatar.is_empty() {
                                 img {
-                                    src: "{user_profile.avatar_url}",
-                                    class: "w-full h-full object-cover",
+                                    src: "{sender_avatar}",
                                 }
                             } else {
-                                "Me"
-                            }
-                        } else if !sender_avatar.is_empty() {
-                            img {
-                                src: "{sender_avatar}",
-                                class: "w-full h-full object-cover",
-                            }
-                        } else {
-                            span { class: "text-2xl font-bold",
-                                "{sender_name.chars().next().unwrap_or('?')}"
+                                div { class: "portrait-frame__fallback text-2xl",
+                                    "{sender_name.chars().next().unwrap_or('?')}"
+                                }
                             }
                         }
                     }
                 }
 
                 div {
-                    class: "{bubble_wrap_class}",
-                    style: "{bubble_anim_style}",
+                    class: "relative group bubble-wrap mt-1 cursor-context-menu inline-block max-w-[60%] min-w-0",
+                    style: "{bubble_wrap_style}",
                     oncontextmenu: move |evt| {
                         evt.prevent_default();
                         on_context_menu.call(evt);
@@ -1013,7 +1017,7 @@ fn MessageBubble(
                                 div { style: "{text_anim_style}", "{message.content}" }
                             }
                             if !reaction_labels.is_empty() {
-                                div { class: "{reaction_wrap_class} {reaction_align_class}",
+                                div { class: "mt-2 flex gap-1 items-center flex-wrap", style: "{reaction_align_style}",
                                     for label in reaction_labels.iter().cloned() {
                                         span {
                                             class: "px-2 py-0.5 text-base rounded-full text-gray-200",

@@ -1,5 +1,6 @@
 use crate::components::baker::capture::CapturePage;
 use crate::components::baker::chat_area::{ChatArea, PendingTyping, ReplayTypingPhase};
+use crate::components::baker::use_synced_field;
 use crate::components::baker::modals::{
     NewChatModal, NewChatSelection, OpsSelection, ProfileModal, ReplayIntervalMode, ReplaySettings,
     ReplaySettingsModal, TutorialModal, UpdateAvailableModal,
@@ -361,21 +362,8 @@ pub fn BakerLayout() -> Element {
     });
 
     // Derived signals for Modals
-    let operators = use_signal(move || app_state.read().operators.clone());
-    // Sync operators back to state when modified in modal (workaround for SettingsModal signature)
-    use_effect(move || {
-        let current_ops = operators.read();
-        if *current_ops != app_state.read().operators {
-            app_state.write().operators = current_ops.clone();
-        }
-    });
-    let background = use_signal(move || app_state.read().background.clone());
-    use_effect(move || {
-        let current_background = background.read();
-        if *current_background != app_state.read().background {
-            app_state.write().background = current_background.clone();
-        }
-    });
+    let operators = use_synced_field(app_state, |s| s.operators.clone(), |s, v| s.operators = v);
+    let _background = use_synced_field(app_state, |s| s.background.clone(), |s, v| s.background = v);
 
     let add_contact = move |selection: NewChatSelection| {
         let mut state = app_state.write();

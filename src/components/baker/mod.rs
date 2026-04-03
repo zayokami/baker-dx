@@ -7,8 +7,27 @@ pub mod settings;
 pub mod sidebar;
 pub mod storage;
 
+use crate::components::baker::storage::v2::AppState;
 use dioxus::prelude::*;
 pub use layout::Route;
+
+/// 创建一个本地 Signal，镜像 AppState 中的某个字段，并在字段变动时自动同步回 AppState。
+pub(super) fn use_synced_field<T, G, S>(mut app_state: Signal<AppState>, get: G, set: S) -> Signal<T>
+where
+    T: Clone + PartialEq + 'static,
+    G: Fn(&AppState) -> T + Copy + 'static,
+    S: Fn(&mut AppState, T) + Copy + 'static,
+{
+    let signal = use_signal(move || get(&app_state.read()));
+    use_effect(move || {
+        let current = signal.read().clone();
+        if current != get(&app_state.read()) {
+            let mut state = app_state.write();
+            set(&mut *state, current);
+        }
+    });
+    signal
+}
 
 pub(super) fn mime_from_filename(name: &str) -> &'static str {
     match name

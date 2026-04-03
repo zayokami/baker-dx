@@ -145,3 +145,118 @@ body {
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
     background-color: rgb(177, 176, 176);
 }
+
+.portrait-frame {
+    position: relative;
+    display: block;
+    border-radius: 999px;
+    background: transparent;
+    box-shadow:
+        0 0 0 1px rgba(180, 210, 255, 0.10),
+        0 0 14px rgba(100, 160, 255, 0.10),
+        0 10px 22px rgba(0, 0, 0, 0.38);
+    isolation: isolate;
+    overflow: hidden;
+}
+
+.portrait-frame__chrome {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    z-index: 0;
+}
+
+.portrait-frame__chrome::before {
+    content: '';
+    position: absolute;
+    inset: 5px;
+    border-radius: inherit;
+    background:
+        radial-gradient(circle at 50% 4%, rgba(255, 255, 255, 0.30), rgba(255, 255, 255, 0) 44%),
+        radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.05) 0, rgba(255, 255, 255, 0.05) 55%, rgba(255, 255, 255, 0) 68%),
+        radial-gradient(circle at 50% 100%, rgba(120, 180, 255, 0.12), rgba(120, 180, 255, 0) 38%);
+    filter: blur(0.3px);
+}
+
+/* 主弧线 + 内层短促强调弧 */
+.portrait-frame__chrome-ring {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='47' fill='none' stroke='%23eef2ff' stroke-width='2.8' stroke-linecap='round' stroke-dasharray='114 34' /%3E%3Ccircle cx='50' cy='50' r='43' fill='none' stroke='%23a8c4ff' stroke-width='1.2' stroke-linecap='round' stroke-dasharray='40 254' opacity='0.55' /%3E%3C/svg%3E");
+    background-size: cover;
+    background-position: center;
+    transform: rotate(-15deg);
+    opacity: 0.97;
+    pointer-events: none;
+    z-index: 1;
+    transition: transform 0.8s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+.portrait-frame:hover .portrait-frame__chrome-ring {
+    transform: rotate(165deg);
+}
+
+.portrait-frame__core {
+    position: relative;
+    width: calc(100% - 10px);
+    height: calc(100% - 10px);
+    margin: 5px;
+    border-radius: inherit;
+    overflow: hidden;
+    background:
+        radial-gradient(circle at 50% 16%, rgba(255, 255, 255, 0.13), rgba(255, 255, 255, 0) 40%),
+        linear-gradient(180deg, rgba(58, 62, 72, 0.93), rgba(26, 28, 36, 0.97));
+    box-shadow:
+        inset 0 0 0 1px rgba(255, 255, 255, 0.10),
+        0 0 0 1px rgba(255, 255, 255, 0.04);
+    z-index: 2;
+}
+
+.portrait-frame__core > img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    filter: saturate(0.96) contrast(1.06) brightness(0.97);
+}
+
+/* 光点粒子层，叠在图像之上 */
+.portrait-frame__core::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    z-index: 3;
+    mix-blend-mode: screen;
+    background-image:
+        radial-gradient(circle at 14% 11%, rgba(255, 255, 255, 0.70) 0px, transparent 1.2px),
+        radial-gradient(circle at 42%  6%, rgba(210, 230, 255, 0.60) 0px, transparent 0.9px),
+        radial-gradient(circle at 68%  9%, rgba(255, 255, 255, 0.55) 0px, transparent 1.0px),
+        radial-gradient(circle at 86% 17%, rgba(180, 215, 255, 0.50) 0px, transparent 0.8px),
+        radial-gradient(circle at  6% 38%, rgba(255, 255, 255, 0.45) 0px, transparent 1.0px),
+        radial-gradient(circle at 93% 42%, rgba(210, 230, 255, 0.45) 0px, transparent 0.9px),
+        radial-gradient(circle at  9% 68%, rgba(180, 215, 255, 0.40) 0px, transparent 1.1px),
+        radial-gradient(circle at 88% 72%, rgba(255, 255, 255, 0.38) 0px, transparent 0.8px),
+        radial-gradient(circle at 28% 88%, rgba(210, 230, 255, 0.40) 0px, transparent 1.0px),
+        radial-gradient(circle at 62% 91%, rgba(255, 255, 255, 0.38) 0px, transparent 0.9px),
+        radial-gradient(circle at 78% 82%, rgba(180, 215, 255, 0.35) 0px, transparent 0.7px),
+        radial-gradient(circle at 35% 22%, rgba(255, 255, 255, 0.30) 0px, transparent 0.8px),
+        radial-gradient(circle at 72% 28%, rgba(210, 230, 255, 0.28) 0px, transparent 0.7px);
+}
+
+.portrait-frame__fallback {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #f4f5f6;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
+    background:
+        radial-gradient(circle at 50% 18%, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0) 34%),
+        linear-gradient(180deg, rgba(92, 96, 104, 0.95), rgba(44, 47, 54, 0.98));
+}

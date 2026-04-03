@@ -1,6 +1,6 @@
 use crate::components::baker::layout::load_repo_config;
 use crate::components::baker::storage::v2::{BackgroundMode, Operator};
-use crate::components::baker::{Route, data_url_from_bytes, mime_from_filename};
+use crate::components::baker::{data_url_from_bytes, mime_from_filename, use_synced_field, Route};
 use crate::dioxus_elements::FileData;
 use dioxus::prelude::*;
 use uuid::Uuid;
@@ -15,20 +15,8 @@ pub fn SettingsPage() -> Element {
         repo_config.owner, repo_config.repo
     );
 
-    let mut operators = use_signal(move || app_state.read().operators.clone());
-    use_effect(move || {
-        let current_ops = operators.read();
-        if *current_ops != app_state.read().operators {
-            app_state.write().operators = current_ops.clone();
-        }
-    });
-    let mut background = use_signal(move || app_state.read().background.clone());
-    use_effect(move || {
-        let current_background = background.read();
-        if *current_background != app_state.read().background {
-            app_state.write().background = current_background.clone();
-        }
-    });
+    let mut operators = use_synced_field(app_state, |s| s.operators.clone(), |s, v| s.operators = v);
+    let mut background = use_synced_field(app_state, |s| s.background.clone(), |s, v| s.background = v);
 
     let mut new_name = use_signal(|| "".to_string());
     let mut new_avatar_preview = use_signal(|| "".to_string());

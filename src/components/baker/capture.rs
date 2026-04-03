@@ -17,7 +17,6 @@ pub(super) fn CapturePage(contact_id: String) -> Element {
             .iter()
             .find(|x| x.id == contact_id)
             .cloned()
-            .unwrap()
     });
 
     let operators = use_signal(move || app_state.read().operators.clone());
@@ -53,9 +52,14 @@ pub(super) fn CapturePage(contact_id: String) -> Element {
         });
     });
 
+    let Some(contact_val) = contact() else {
+        navigator.push(Route::BakerLayout {});
+        return rsx! {};
+    };
+
     let chat_area = rsx! {
         ChatArea {
-            contact: contact(),
+            contact: contact_val,
             operators,
             messages,
             user_profile,
