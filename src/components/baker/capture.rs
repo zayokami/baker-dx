@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 
 use crate::components::baker::{
-    capture, chat_area::ChatArea, download_image, modals::Modal, Route,
+    Route, capture, chat_area::ChatArea, download_image, modals::Modal,
 };
 
 #[component]

@@ -4,9 +4,9 @@ use dioxus::prelude::*;
 use std::cell::Cell;
 use std::rc::Rc;
 
+use components::baker::Route;
 use components::baker::storage::v2::AppState;
 use components::baker::storage::{load_state, save_state};
-use components::baker::Route;
 
 mod components;
 

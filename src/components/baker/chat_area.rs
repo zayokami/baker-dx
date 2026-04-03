@@ -1,3 +1,4 @@
+use crate::components::baker::Route;
 use crate::components::baker::input_bar::InputBar;
 use crate::components::baker::modals::{
     EditGroupChatProps, EditMessageModal, InsertMessageModal, OpsSelection, PickSenderModal,
@@ -6,7 +7,6 @@ use crate::components::baker::modals::{
 use crate::components::baker::storage::v2::{
     ChatHeadStyle, Contact, Message, MessageKind, Operator, UserProfile,
 };
-use crate::components::baker::Route;
 use dioxus::prelude::*;
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -843,15 +843,13 @@ fn MessageBubble(
     let is_sticker = matches!(message.kind, MessageKind::Sticker);
 
     let is_image = matches!(message.kind, MessageKind::Image);
-    let base_bubble_class =
-        "relative px-3 py-2 text-base font-medium shadow-sm break-words whitespace-pre-wrap leading-relaxed text-left";
+    let base_bubble_class = "relative px-3 py-2 text-base font-medium shadow-sm break-words whitespace-pre-wrap leading-relaxed text-left";
     let bubble_class = if is_image && !is_sticker {
         "relative text-base font-medium leading-relaxed text-left"
     } else {
         base_bubble_class
     };
-    let typing_bubble_class =
-        "relative px-3 py-2 text-base font-medium shadow-sm leading-relaxed text-left min-h-[42px] flex items-center";
+    let typing_bubble_class = "relative px-3 py-2 text-base font-medium shadow-sm leading-relaxed text-left min-h-[42px] flex items-center";
 
     let bubble_radius_class = if is_self {
         "rounded-2xl rounded-tr-none"

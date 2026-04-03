@@ -2,8 +2,8 @@ use crate::components::baker::capture::CapturePage;
 use crate::components::baker::chat_area::{ChatArea, PendingTyping, ReplayTypingPhase};
 use crate::components::baker::use_synced_field;
 use crate::components::baker::modals::{
-    NewChatModal, NewChatSelection, OpsSelection, ProfileModal, ReplayIntervalMode,
-    ReplaySettings, ReplaySettingsModal, TutorialModal, UpdateAvailableModal,
+    NewChatModal, NewChatSelection, OpsSelection, ProfileModal, ReplayIntervalMode, ReplaySettings,
+    ReplaySettingsModal, TutorialModal, UpdateAvailableModal,
 };
 use crate::components::baker::settings::SettingsPage;
 use crate::components::baker::sidebar::Sidebar;
@@ -85,9 +85,10 @@ fn schedule_animate_off_in_state(
     spawn(async move {
         sleep_ms(220).await;
         if let Some(msgs) = app_state.write().messages.get_mut(&contact_id)
-            && let Some(msg) = msgs.iter_mut().find(|m| m.id == msg_id) {
-                msg.animate = false;
-            }
+            && let Some(msg) = msgs.iter_mut().find(|m| m.id == msg_id)
+        {
+            msg.animate = false;
+        }
     });
 }
 
@@ -118,9 +119,10 @@ fn schedule_reaction_animate_off_in_state(
     spawn(async move {
         sleep_ms(220).await;
         if let Some(msgs) = app_state.write().messages.get_mut(&contact_id)
-            && let Some(msg) = msgs.iter_mut().find(|m| m.id == msg_id) {
-                msg.animate_reactions = false;
-            }
+            && let Some(msg) = msgs.iter_mut().find(|m| m.id == msg_id)
+        {
+            msg.animate_reactions = false;
+        }
     });
 }
 
@@ -332,9 +334,10 @@ pub fn BakerLayout() -> Element {
     let messages = use_memo(move || {
         if let Some(id) = selected_contact_id() {
             if let Some(replay) = replay_active()
-                && replay.contact_id == id {
-                    return replay_messages();
-                }
+                && replay.contact_id == id
+            {
+                return replay_messages();
+            }
             app_state
                 .read()
                 .messages
@@ -425,9 +428,10 @@ pub fn BakerLayout() -> Element {
         if let Some(contact_id) = selected_contact_id() {
             let mut state = app_state.write();
             if let Some(msgs) = state.messages.get_mut(&contact_id)
-                && let Some(msg) = msgs.iter_mut().find(|m| m.id == msg_id) {
-                    msg.content = new_content;
-                }
+                && let Some(msg) = msgs.iter_mut().find(|m| m.id == msg_id)
+            {
+                msg.content = new_content;
+            }
         }
     };
 
@@ -443,14 +447,15 @@ pub fn BakerLayout() -> Element {
             {
                 let mut state = app_state.write();
                 if let Some(msgs) = state.messages.get_mut(&contact_id)
-                    && let Some(msg) = msgs.iter_mut().find(|m| m.id == msg_id) {
-                        msg.reactions.push(MessageReaction {
-                            content: reaction,
-                            sender_id,
-                        });
-                        msg.animate_reactions = true;
-                        should_animate = true;
-                    }
+                    && let Some(msg) = msgs.iter_mut().find(|m| m.id == msg_id)
+                {
+                    msg.reactions.push(MessageReaction {
+                        content: reaction,
+                        sender_id,
+                    });
+                    msg.animate_reactions = true;
+                    should_animate = true;
+                }
             }
             if should_animate {
                 schedule_reaction_animate_off_in_state(app_state, contact_id, msg_id_value);
@@ -463,11 +468,12 @@ pub fn BakerLayout() -> Element {
             let user_id = app_state.read().user_profile.id.clone();
             let mut state = app_state.write();
             if let Some(msgs) = state.messages.get_mut(&contact_id)
-                && let Some(msg) = msgs.iter_mut().find(|m| m.id == msg_id) {
-                    // 只删除当前用户的反应，保留其他人的
-                    msg.reactions
-                        .retain(|reaction| reaction.sender_id != user_id);
-                }
+                && let Some(msg) = msgs.iter_mut().find(|m| m.id == msg_id)
+            {
+                // 只删除当前用户的反应，保留其他人的
+                msg.reactions
+                    .retain(|reaction| reaction.sender_id != user_id);
+            }
         }
     };
 
@@ -583,12 +589,13 @@ pub fn BakerLayout() -> Element {
     use_effect(move || {
         let current = selected_contact_id();
         if let Some(replay) = replay_active()
-            && Some(replay.contact_id) != current {
-                replay_token.set(replay_token() + 1);
-                replay_active.set(None);
-                replay_messages.set(Vec::new());
-                replay_pending.set(None);
-            }
+            && Some(replay.contact_id) != current
+        {
+            replay_token.set(replay_token() + 1);
+            replay_active.set(None);
+            replay_messages.set(Vec::new());
+            replay_pending.set(None);
+        }
     });
 
     let need_to_scroll_down = use_signal(|| false);
@@ -771,9 +778,10 @@ pub fn BakerLayout() -> Element {
     let replay_pending_for_contact = use_memo(move || {
         if let Some(replay) = replay_active()
             && let Some(selected_id) = selected_contact_id()
-                && replay.contact_id == selected_id {
-                    return replay_pending();
-                }
+            && replay.contact_id == selected_id
+        {
+            return replay_pending();
+        }
         None
     });
     let background_style = use_memo(move || {
