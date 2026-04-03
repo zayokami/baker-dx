@@ -924,26 +924,26 @@ fn MessageBubble(
             }
             div { class: "relative w-full min-w-0 flex", style: "{row_align_style}",
                 if show_avatar {
-                    div { class: "portrait-frame w-14 h-14 shrink-0", style: "position: absolute; {avatar_slot_style}",
-                        div { class: "portrait-frame__chrome" }
-                        div { class: "portrait-frame__chrome-ring" }
-                        div { class: "portrait-frame__core",
-                            if is_self {
-                                if !user_profile.avatar_url.is_empty() {
-                                    img {
-                                        src: "{user_profile.avatar_url}",
-                                    }
-                                } else {
-                                    div { class: "portrait-frame__fallback text-xs", "Me" }
-                                }
-                            } else if !sender_avatar.is_empty() {
+                    div {
+                        class: "w-14 h-14 bg-gray-600 border border-gray-500 shrink-0 flex items-center justify-center text-xs text-gray-300 rounded-full overflow-hidden",
+                        style: "position: absolute; {avatar_slot_style}",
+                        if is_self {
+                            if !user_profile.avatar_url.is_empty() {
                                 img {
-                                    src: "{sender_avatar}",
+                                    src: "{user_profile.avatar_url}",
+                                    class: "w-full h-full object-cover",
                                 }
                             } else {
-                                div { class: "portrait-frame__fallback text-2xl",
-                                    "{sender_name.chars().next().unwrap_or('?')}"
-                                }
+                                "Me"
+                            }
+                        } else if !sender_avatar.is_empty() {
+                            img {
+                                src: "{sender_avatar}",
+                                class: "w-full h-full object-cover",
+                            }
+                        } else {
+                            span { class: "text-2xl font-bold",
+                                "{sender_name.chars().next().unwrap_or('?')}"
                             }
                         }
                     }
