@@ -12,7 +12,11 @@ use dioxus::prelude::*;
 pub use layout::Route;
 
 /// 创建一个本地 Signal，镜像 AppState 中的某个字段，并在字段变动时自动同步回 AppState。
-pub(super) fn use_synced_field<T, G, S>(mut app_state: Signal<AppState>, get: G, set: S) -> Signal<T>
+pub(super) fn use_synced_field<T, G, S>(
+    mut app_state: Signal<AppState>,
+    get: G,
+    set: S,
+) -> Signal<T>
 where
     T: Clone + PartialEq + 'static,
     G: Fn(&AppState) -> T + Copy + 'static,
@@ -23,7 +27,7 @@ where
         let current = signal.read().clone();
         if current != get(&app_state.read()) {
             let mut state = app_state.write();
-            set(&mut *state, current);
+            set(&mut state, current);
         }
     });
     signal
