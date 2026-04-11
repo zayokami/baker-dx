@@ -799,14 +799,14 @@ fn ReplayFinishedLine(content: String, animate: bool) -> Element {
     };
 
     rsx! {
-        div { class: "w-full grid grid-cols-[8px_1fr_auto_1fr_8px] items-center select-none",
+        div { class: "w-full grid grid-cols-[0px_1fr_auto_1fr_0px] items-center select-none",
             div {}
             div {
                 class: "flex-1 h-[2px] bg-[rgb(145,145,145)]",
                 style: "{left_line_style}",
             }
             span {
-                class: "px-2 text-[rgb(145,145,145)] text-xs font-bold tracking-wide whitespace-nowrap",
+                class: "px-3 text-[rgb(145,145,145)] text-sm font-bold tracking-wide whitespace-nowrap",
                 style: "{text_style}",
                 "{content}"
             }
